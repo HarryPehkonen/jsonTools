@@ -166,15 +166,12 @@ These were open during design and are now settled:
 > The design is ~complete; these are the consciously-deferred decisions to
 > resolve before/while implementing. All other semantics are settled.
 
-1. **Array growth (the main open question).** There is currently no way to
-   *append* to an array. `jtNew '[]'` creates an empty array; `jtSet /items/0`
-   only works if index 0 already exists (JSOM `set_at` requires the parent
-   index). Options:
-   - **`-` append sentinel** (JSON Patch RFC 6902): `jtSet /items/- '"x'"` →
-     append. Standard, keeps the verb count down. JSOM does NOT support `-`
-     natively — jsonTools would translate it to `index = array.size()`.
-   - **Dedicated `jtAppend` verb.**
-   - *Lean: `-` append sentinel.*
+1. **Array growth — RESOLVED (Aug 2026).** The `-` append sentinel is now
+   implemented **in JSOM itself** (`JsonDocument::set_at("/items/-", value)`
+   appends; `JsonPointer::is_append()` added; see
+   [JSOM#1](https://github.com/HarryPehkonen/JSOM/issues/1), commit `669645a`).
+   So `jtSet /items/- '"x"'` is a direct `set_at` call — **no translation shim
+   in jsonTools**. `-` on a non-array parent throws (never a stray `"-"` key).
 
 2. **Permuto as terminal stage.** Architecture idea (not yet decided): pipe
    jsonTools into Permuto for declarative final projection —
