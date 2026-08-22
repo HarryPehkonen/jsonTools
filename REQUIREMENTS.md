@@ -160,3 +160,36 @@ These were open during design and are now settled:
 - Not a database, not a query language, not a REPL (that's Computo's job).
 - No streaming / RAM-exceeding input support.
 - No schema validation or typing beyond JSON's own types.
+
+## 11. Open dilemmas (paused for later)
+
+> The design is ~complete; these are the consciously-deferred decisions to
+> resolve before/while implementing. All other semantics are settled.
+
+1. **Array growth (the main open question).** There is currently no way to
+   *append* to an array. `jtNew '[]'` creates an empty array; `jtSet /items/0`
+   only works if index 0 already exists (JSOM `set_at` requires the parent
+   index). Options:
+   - **`-` append sentinel** (JSON Patch RFC 6902): `jtSet /items/- '"x'"` →
+     append. Standard, keeps the verb count down. JSOM does NOT support `-`
+     natively — jsonTools would translate it to `index = array.size()`.
+   - **Dedicated `jtAppend` verb.**
+   - *Lean: `-` append sentinel.*
+
+2. **Permuto as terminal stage.** Architecture idea (not yet decided): pipe
+   jsonTools into Permuto for declarative final projection —
+   `jsonTools | permuto template.json -`. Requires Permuto to gain a `-`
+   stdin convention for the context arg (it currently reads files only). This
+   would de-scope jsonTools' "final assembly" ambitions (no templating verbs).
+
+## 12. Recent semantics changes (Aug 2026, for reference)
+
+- `jtLen` **creates** the destination leaf (not "must pre-exist"); errors only
+  on a missing *intermediate* (unless `-p`).
+- `jtSort --desc-for <key>` applies to the **next single key only** (ffmpeg
+  mid-argument style); repeat `--desc-for` for multiple descending keys.
+- `jtSelect` with zero paths = error; duplicate leaf keys = error.
+- `jtGet /` = allowed (identity, for debugging).
+- `jtType [path]` → emits the type string; `jtKeys [path]` → emits keys array.
+- **Library API** (see `TECHNICAL_DETAILS.md` §8): verbs are `jt::` functions,
+  `jt::Error` throws (CLI catches → exit), return-by-value + move.

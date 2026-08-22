@@ -245,7 +245,88 @@ shared tests:
 - **Property tests**: `jtMove` then `jtMove` back (round-trip identity);
   `jtFilter` output length ≤ input length; `jtLen` value == `keys().size()`.
 
-## 7. Resolved implementation notes (Aug 2026)
+## 8. Library API (in-process use)
+
+jsonTools is designed to be usable **both** as a CLI suite and as a C++ library
+(`#include <jt/jt.hpp>`, link `jt_core` + JSOM). The verbs are the shared
+functions; the CLI `main()`s are thin shims over them.
+
+### 8.1 Structure discipline (function-first)
+
+Each verb's logic lives in the library, **not** in `main()`. The CLI source is
+an arg-parser + one call:
+
+```cpp
+// jt/set.hpp — the library
+namespace jt {
+  JsonDocument set(JsonDocument doc, const std::string& path,
+                   const JsonDocument& literal, bool mkdir_p = false);
+}
+
+// jt_set.cpp — the CLI shim
+int main(int argc, char* argv[]) {
+  ... parse args ...
+  JsonDocument doc = jt::read_stdin();
+  doc = jt::set(std::move(doc), path, literal, mkdir_p);
+  jt::write_stdout(doc, pretty);
+}
+```
+
+This mirrors the pipe philosophy in code: each verb is a function taking a
+document (by value, moved) and returning the mutated document, so callers
+compose exactly like a shell pipeline:
+
+```cpp
+auto out = jt::set(jt::filter(jt::move(doc, "/a", "/b"), "age", jt::gt(18)),
+                   "/x", 42);
+```
+
+### 8.2 Error model: throw vs exit (split)
+
+The library must never `exit()` the host program. So:
+
+- **Library** throws `jt::Error` — an exception carrying `path`, `problem`,
+  and optional `suggestion`.
+- **CLI** wraps the verb call in a try/catch; on `jt::Error`, it formats
+  `Error at <path>: <problem>. <suggestion>` and `exit(1)`.
+
+Same error text, two delivery paths. `jt::fail()` (the CLI-only exit helper)
+is implemented as a thin catch → print → exit; it is **not** called from any
+library function.
+
+```cpp
+// jt/error.hpp
+class Error : public std::runtime_error {
+ public:
+  Error(std::string path, std::string problem, std::string suggestion = "")
+      : std::runtime_error(problem), path_(std::move(path)),
+        suggestion_(std::move(suggestion)) {}
+  const std::string& path() const { return path_; }
+  const std::string& suggestion() const { return suggestion_; }
+ private:
+  std::string path_, suggestion_;
+};
+```
+
+### 8.3 Value semantics
+
+- **Return-by-value with move** (`JsonDocument` is a `std::variant`, so moves
+  are cheap; the document is consumed and returned, not mutated in place).
+- **Literals** are `JsonDocument` values (parsed from JSON text at the call
+  site), so `jt::set(doc, "/x", 42)` and `jt::set(doc, "/x", "hi")` are both
+  natural via JSOM's implicit construction.
+- **Comparison operators for `jtFilter`** are exposed as a small value type
+  (`jt::op::eq / ne / gt / ge / lt / le`) so the library API is as typed as the
+  CLI flags.
+
+### 8.4 Consequences for the build
+
+- `jt_core` is the installable library (header `jt/jt.hpp` aggregates the verb
+  headers). JSOM is a transitive public dependency (its types appear in the
+  API), so `jt_core` links `JSOM::jsom` with `PUBLIC`.
+- CLI binaries remain separate executables; they now just wrap `jt_core`.
+
+## 9. Resolved implementation notes (Aug 2026)
 
 1. **`jtZip` duplicate keys** = error by default; `--overwrite` switches to
    last-wins on collision.
