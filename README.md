@@ -63,21 +63,96 @@ implementation mapping and the C++ library API.
 
 ## Examples
 
+Each shows the command, then its output. Values passed to `jtSet` are JSON
+literals, so strings are quoted and numbers/booleans/null are bare.
+
+### Build an object
+
 ```bash
-# Build an object from nothing
-jtNew '{}' | jtSet /name '"harri"' | jtSet /age 48
+$ jtNew | jtSet /name '"harri"' | jtSet /age 48
+{"age":48,"name":"harri"}
+```
 
-# Reshape
-echo '{"user":{"name":"harri","age":48}}' | jtMove /user/name /name
+### Nested structure — three ways
 
-# Narrow + sort + project
-echo '{"users":[{"name":"ada","age":36},{"name":"harri","age":48}]}' \
-  | jtFilter /users age --gt 40 \
-  | jtSort /users name \
-  | jtSelect /users
+```bash
+# whole literal at once
+$ jtNew '{"key1":{"key2":{"key3":"value"}}}'
+{"key1":{"key2":{"key3":"value"}}}
 
-# Append to an array (RFC 6902 "-" sentinel)
-echo '{"items":["a","b"]}' | jtSet /items/- '"c"'
+# one mutation, -p creates the intermediate objects
+$ jtNew | jtSet /key1/key2/key3 '"value"' -p
+{"key1":{"key2":{"key3":"value"}}}
+
+# explicit, one level per mutation
+$ jtNew | jtSet /key1 '{}' | jtSet /key1/key2 '{}' | jtSet /key1/key2/key3 '"value"'
+{"key1":{"key2":{"key3":"value"}}}
+```
+
+### Environment variables (note the quoting)
+
+```bash
+$ jtNew | jtSet /home "\"$HOME\""
+{"home":"/home/harri"}
+
+$ jtNew | jtSet /path/home "\"$HOME\"" -p
+{"path":{"home":"/home/harri"}}
+```
+
+The `\"` keeps the double quotes as part of the JSON string while letting the
+shell expand `$HOME`. Single quotes won't work — `'$HOME'` stays literal and
+isn't valid JSON.
+
+### Reshape (move a value)
+
+```bash
+$ echo '{"user":{"name":"harri"}}' | jtMove /user/name /name
+{"name":"harri","user":{}}
+```
+
+### Append to an array (RFC 6902 `-` sentinel)
+
+```bash
+$ echo '{"items":["a","b"]}' | jtSet /items/- '"c"'
+{"items":["a","b","c"]}
+```
+
+### Build an object from two arrays
+
+```bash
+$ echo '{"keys":["name","age"],"vals":["harri",48]}' | jtZip /keys /vals
+{"age":48,"name":"harri"}
+```
+
+### Count a list (into a field, document intact)
+
+```bash
+$ echo '{"items":[1,2,3]}' | jtLen /items /count
+{"count":3,"items":[1,2,3]}
+```
+
+### List an object's keys
+
+```bash
+$ echo '{"a":1,"b":2}' | jtKeys
+["a","b"]
+```
+
+### Filter → sort → project (a real chain)
+
+```bash
+$ echo '{"users":[{"name":"ada","age":36},{"name":"harri","age":48},{"name":"bob","age":51}]}' \
+    | jtFilter /users age --gt 40 \
+    | jtSort /users name \
+    | jtSelect /users
+{"users":[{"age":51,"name":"bob"},{"age":48,"name":"harri"}]}
+```
+
+### Errors — actionable, with typo hints
+
+```bash
+$ echo '{"name":"harri"}' | jtMove /nam /x
+Error at /nam: path not found. did you mean /name?
 ```
 
 ## Errors
