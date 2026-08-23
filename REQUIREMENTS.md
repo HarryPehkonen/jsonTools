@@ -55,8 +55,14 @@ mutator).
   one `.cpp` source file each; shared helpers linked from a common library.
   A single top-level `CMakeLists.txt` builds all binaries (tests may use
   their own).
-- **Paths**: JSON Pointer (RFC 6901) everywhere — `/user/name`, `/items/0`,
-  `/`. Relative sub-paths (inside a list element) have no leading slash.
+- **Paths**: strict JSON Pointer (RFC 6901) — no deviations. A leading `/`
+  anchors at the document root; **whole-document verbs** (`jtSet`, `jtMove`,
+  `jtGet`, `jtSelect`, `jtRemove`, `jtCopy`, `jtZip`, `jtLen`) take absolute
+  pointers (`/user/name`, `/items/0`). **Per-element verbs** (`jtSort`,
+  `jtFilter`) take element-**relative** key paths with **no leading slash**
+  (`name`, `name/last` → `element.name.last`). Rejected: `/name` as a
+  per-element marker (collides with root semantics) and `./name` (non-standard
+  alias). One spelling per concept — follow the spec.
 - **I/O**: stdin → one JSON document in; stdout → one JSON document out.
 - **Optional `[listPath]`**: any verb acting on a container takes an optional
   first path defaulting to `/`. When the flowing document *is* the list, the
