@@ -115,8 +115,9 @@ jtSet <path> <literal> [-p]
 ```
 Resolve the parent of `<path>` via `JsonPointer::get_parent`. If any
 intermediate segment is missing: **error unless `-p`** (which creates
-intermediate objects — array indices create arrays). Then `set` the literal
-at the leaf.
+intermediate **objects only** — `-p` never creates or grows arrays; use the
+`-` append sentinel `jtSet /items/- ...` for array growth). Then `set` the
+literal at the leaf.
 
 - `-p` is the `mkdir -p` analog: without it, a missing parent is an error.
 - Setting onto a scalar/array where the path implies an object key is a type
@@ -171,9 +172,10 @@ jtSort [<listPath>] <key1> [--desc-for <key2> <key3>]
 ```
 Resolve the list (default `/`). Sort is **stable**. If keys are given, each
 element must be an object; sort by successive keys, each `--desc-for` key in
-reverse. No keys → sort by element natural type: numbers numerically, strings
-lexically, **mixed types → error**. (Future: a `--js-coerce` flag enabling
-JavaScript-style comparison.)
+reverse — `--desc-for` applies to the **next single key only** (repeat it for
+multiple descending keys). No keys → sort by element natural type: numbers
+numerically, strings lexically, **mixed types → error**. (Future: a
+`--js-coerce` flag enabling JavaScript-style comparison.)
 
 ### 3.10 `jtFilter`
 ```
@@ -190,9 +192,10 @@ silently (fails the predicate).
 jtLen <listPath> <destPath>
 ```
 Resolve `<listPath>` (must be an array or object). Compute its length. `set`
-that number at `<destPath>`, which must already exist (no implicit `-p`;
-missing destination → error). Document otherwise intact. (Form B: read
-length, write to a field.)
+that number at `<destPath>`, **creating the destination leaf** if absent
+(consistent with `jtSet`'s leaf-creation; only a missing *intermediate* errors
+unless `-p`). Document otherwise intact. (Form B: read length, write to a
+field.)
 
 ## 4. JSOM integration points (grounded)
 
@@ -332,5 +335,5 @@ class Error : public std::runtime_error {
    last-wins on collision.
 2. **`jtFilter` missing key** = element is dropped silently (fails the
    predicate).
-3. **`jtLen` intermediate creation** = requires `destPath` to already exist
-   (no implicit `-p`); missing destination is an error.
+3. **`jtLen` dest leaf** = **created** if absent (like `jtSet`'s leaf); only a
+   missing *intermediate* errors unless `-p`.
