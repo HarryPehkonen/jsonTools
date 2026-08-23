@@ -20,6 +20,15 @@ add_executable(jt_tests
   test_set.cpp
   test_copy.cpp
   test_move.cpp
+  test_remove.cpp
+  test_get.cpp
+  test_select.cpp
+  test_zip.cpp
+  test_sort.cpp
+  test_filter.cpp
+  test_len.cpp
+  test_type.cpp
+  test_keys.cpp
 )
 
 target_link_libraries(jt_tests PRIVATE jt_core ${JT_GTEST_LIBS})

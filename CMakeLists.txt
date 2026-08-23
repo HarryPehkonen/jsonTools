@@ -26,10 +26,19 @@ add_library(jt_core STATIC
   src/common.cpp
   src/copy.cpp
   src/errors.cpp
+  src/filter.cpp
   src/from.cpp
+  src/get.cpp
+  src/keys.cpp
+  src/len.cpp
   src/move.cpp
   src/paths.cpp
+  src/remove.cpp
+  src/select.cpp
   src/set.cpp
+  src/sort.cpp
+  src/type.cpp
+  src/zip.cpp
 )
 target_include_directories(jt_core PUBLIC include)
 target_link_libraries(jt_core PUBLIC JSOM::jsom)
@@ -39,7 +48,8 @@ target_compile_options(jt_core PRIVATE
 # --- The tools (one executable per source file) ---
 # The binary is jt<Verb>; the source is src/jt_<verb>.cpp.
 # Each tool is added as it is implemented.
-foreach(tool IN ITEMS New From Set Move Copy)
+foreach(tool IN ITEMS New From Set Move Copy Remove Get Select Zip Sort Filter
+                     Len Type Keys)
   string(TOLOWER "${tool}" tool_file)
   add_executable(jt${tool} src/jt_${tool_file}.cpp)
   target_link_libraries(jt${tool} PRIVATE jt_core)
