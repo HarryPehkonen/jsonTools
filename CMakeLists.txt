@@ -43,6 +43,7 @@ add_library(jt_core STATIC
   src/set.cpp
   src/sort.cpp
   src/type.cpp
+  src/values.cpp
   src/zip.cpp
 )
 target_include_directories(jt_core PUBLIC include)
@@ -54,7 +55,7 @@ target_compile_options(jt_core PRIVATE
 # The binary is jt<Verb>; the source is src/jt_<verb>.cpp.
 # Each tool is added as it is implemented.
 foreach(tool IN ITEMS New From Set Move Copy Remove Get Select Zip Sort Filter
-                     Len Type Keys)
+                     Len Type Keys Values)
   string(TOLOWER "${tool}" tool_file)
   add_executable(jt${tool} src/jt_${tool_file}.cpp)
   target_link_libraries(jt${tool} PRIVATE jt_core)
@@ -74,7 +75,7 @@ endif()
 # layout (single-user ~/.local or system-wide /usr/local).
 install(TARGETS jt_core ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 foreach(tool IN ITEMS New From Set Move Copy Remove Get Select Zip Sort Filter
-                     Len Type Keys)
+                     Len Type Keys Values)
   install(TARGETS jt${tool} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

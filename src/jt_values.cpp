@@ -1,14 +1,14 @@
 #include "jt/args.hpp"
 #include "jt/common.hpp"
 #include "jt/errors.hpp"
-#include "jt/keys.hpp"
+#include "jt/values.hpp"
 
 #include <string>
 #include <vector>
 
 namespace {
 const char* kUsage =
-    "jtKeys [<objPath>] | jtKeys <objPath> <destPath> [-p] [--pretty]";
+    "jtValues [<objPath>] | jtValues <objPath> <destPath> [-p] [--pretty]";
 }
 
 int main(int argc, char* argv[]) {
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
-    if (jt::take_global(arg, "jtKeys", kUsage, globals)) {
+    if (jt::take_global(arg, "jtValues", kUsage, globals)) {
       if (globals.exit_now) return 0;
     } else if (arg == "-p") {
       mkdir_p = true;
@@ -30,11 +30,12 @@ int main(int argc, char* argv[]) {
   return jt::run_cli([&] {
     jsom::JsonDocument doc = jt::read_stdin();
     if (positional.empty() || positional.size() == 1) {
-      // Reduction: document becomes the keys array.
-      doc = jt::keys(std::move(doc), positional.empty() ? "/" : positional[0]);
+      // Reduction: document becomes the values array.
+      doc = jt::values_array(std::move(doc),
+                             positional.empty() ? "/" : positional[0]);
     } else if (positional.size() == 2) {
-      // Form B: write the keys array to dest, document intact.
-      doc = jt::keys_to(std::move(doc), positional[0], positional[1], mkdir_p);
+      // Form B: write the values array to dest, document intact.
+      doc = jt::values(std::move(doc), positional[0], positional[1], mkdir_p);
     } else {
       jt::fail("<args>", "expected at most <objPath> <destPath>", kUsage);
     }

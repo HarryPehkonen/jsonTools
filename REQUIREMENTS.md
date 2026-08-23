@@ -31,6 +31,12 @@ joined by pipes.
    silent `null`s.
 5. **Plain JSON on the wire.** Tools never emit a private envelope; output is
    always valid JSON a human (or `jq`) can read.
+6. **Composability is a requirement.** Every tool's output must be usable as
+   another tool's input — a value you can *extract* must be a value you can
+   *place*. Introspection verbs therefore offer a non-destructive **Form B**
+   (`<src> <dest>` writes the result into the document) alongside their
+   reduction form, so e.g. `jtKeys`/`jtValues` can feed `jtZip` to rebuild an
+   object. A tool that can only *destroy* or only *inspect* is incomplete.
 
 ## 3. Foundation
 
@@ -103,6 +109,9 @@ mutator).
 | `jtSort` | Sort a list (`jtSort <listPath> <key1> --desc-for <key2> <key3>`). Multiple keys, mixed directions. No keys → sort by element natural type (numbers numerically, strings lexically); **mixed types = error**. "Typical JavaScript" coercion is a **future switchable option**. |
 | `jtFilter` | Filter a list: `jtFilter [listPath] <keyPath> --op <literal>`. `keyPath` is relative to each element. Operators: `--eq --ne --gt --ge --lt --le` (and string equality for `--eq`). Value is a JSON literal so type is unambiguous. |
 | `jtLen` | **Form B**: read the length of the list at `listPath`, write it to `destPath`, leave the document intact. (`jtLen /items /count` → `{"items":[…], "count":7}`.) |
+| `jtKeys` | **Reduction**: `jtKeys [objPath]` → the document becomes the array of the object's keys. **Form B**: `jtKeys <objPath> <destPath>` → write the keys array to `destPath`, document intact. (Composability: Form B is what lets `jtKeys` feed `jtZip`.) |
+| `jtValues` | **Reduction**: `jtValues [objPath]` → the document becomes the array of the object's values. **Form B**: `jtValues <objPath> <destPath>` → write the values array to `destPath`, document intact. |
+| `jtType` | Reduction: the document becomes the JSON type name of the value at `[path]` (a string). |
 
 ### Deferred (not in v1)
 - **`jtRun`** — batch script = serialized pipeline (one `jt*` command per line).
