@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Install layout (bin/lib/include), driven by CMAKE_INSTALL_PREFIX.
+# Single-user default:  cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$HOME/.local
+# System-wide:          cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local
+include(GNUInstallDirs)
+
 # --- JSOM dependency ---
 # Prefer an existing source dir; otherwise FetchContent from GitHub.
 set(JSOM_SOURCE_DIR "" CACHE PATH "Path to a local JSOM checkout")
@@ -63,3 +68,13 @@ if(JT_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+# --- Install ---
+# Binaries + the static library + headers, into a CMAKE_INSTALL_PREFIX-driven
+# layout (single-user ~/.local or system-wide /usr/local).
+install(TARGETS jt_core ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+foreach(tool IN ITEMS New From Set Move Copy Remove Get Select Zip Sort Filter
+                     Len Type Keys)
+  install(TARGETS jt${tool} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endforeach()
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
