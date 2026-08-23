@@ -33,8 +33,8 @@ static int edit_distance(const std::string& a, const std::string& b) {
   return prev[m];
 }
 
-std::string nearest_key(const std::vector<std::string>& candidates,
-                        const std::string& target) {
+std::string nearest_candidate(const std::vector<std::string>& candidates,
+                              const std::string& target) {
   int best = -1;
   std::string best_key;
   for (const auto& c : candidates) {
@@ -45,6 +45,12 @@ std::string nearest_key(const std::vector<std::string>& candidates,
       best_key = c;
     }
   }
+  return best_key;
+}
+
+std::string nearest_key(const std::vector<std::string>& candidates,
+                        const std::string& target) {
+  std::string best_key = nearest_candidate(candidates, target);
   return best_key.empty() ? "" : "did you mean /" + best_key + "?";
 }
 

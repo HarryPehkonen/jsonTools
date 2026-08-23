@@ -22,17 +22,29 @@ endif()
 
 # --- Shared core (libjt) ---
 add_library(jt_core STATIC
+  src/args.cpp
   src/common.cpp
+  src/copy.cpp
   src/errors.cpp
+  src/from.cpp
+  src/move.cpp
+  src/paths.cpp
+  src/set.cpp
 )
 target_include_directories(jt_core PUBLIC include)
 target_link_libraries(jt_core PUBLIC JSOM::jsom)
+target_compile_options(jt_core PRIVATE
+  $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
 
 # --- The tools (one executable per source file) ---
-# Each tool is added as it is implemented. Currently shipped: jtNew.
-foreach(tool IN ITEMS new)
-  add_executable(jt${tool} src/jt_${tool}.cpp)
+# The binary is jt<Verb>; the source is src/jt_<verb>.cpp.
+# Each tool is added as it is implemented.
+foreach(tool IN ITEMS New From Set Move Copy)
+  string(TOLOWER "${tool}" tool_file)
+  add_executable(jt${tool} src/jt_${tool_file}.cpp)
   target_link_libraries(jt${tool} PRIVATE jt_core)
+  target_compile_options(jt${tool} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
 endforeach()
 
 # --- Tests ---
