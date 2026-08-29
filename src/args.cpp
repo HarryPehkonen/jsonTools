@@ -1,6 +1,7 @@
 #include "jt/args.hpp"
 
 #include "jt/errors.hpp"
+#include "jt/version.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -19,7 +20,7 @@ bool take_global(const std::string& arg, const char* tool, const char* usage,
     return true;
   }
   if (arg == "--version") {
-    std::cout << tool << " (jsonTools) 0.1.0\n";
+    std::cout << tool << " (jsonTools) " << JT_VERSION << "\n";
     globals.exit_now = true;
     return true;
   }

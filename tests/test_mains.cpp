@@ -6,6 +6,8 @@
 // stays spellable as '/', and jtNew with no arguments still defaults to {}.
 #include <gtest/gtest.h>
 
+#include "jt/version.hpp"
+
 #include <csignal>
 #include <string>
 #include <sys/wait.h>
@@ -161,6 +163,15 @@ TEST(JtMains, NewWithNoArgumentsStillWorks) {
   const RunResult r = run_tool({tool("jtNew")}, "");
   EXPECT_EQ(r.exit_code, 0);
   EXPECT_EQ(r.out, "{}\n");
+}
+
+// --version output comes from the single source of truth (FIX_ME A.2): the
+// string include/jt/version.hpp hands out is the string the binary prints,
+// so a bump there cannot drift from what the tools report.
+TEST(JtMains, VersionOutputComesFromVersionHeader) {
+  const RunResult r = run_tool({tool("jtSet"), "--version"}, "");
+  EXPECT_EQ(r.exit_code, 0);
+  EXPECT_NE(r.out.find(jt::JT_VERSION), std::string::npos);
 }
 
 }  // namespace

@@ -1,5 +1,6 @@
 #include "jt/args.hpp"
 #include "jt/common.hpp"
+#include "jt/version.hpp"
 
 #include <iostream>
 
@@ -14,7 +15,7 @@ int main(int argc, char* argv[]) {
       std::cout << "usage: jtNew [literal] [--pretty]\n";
       return 0;
     } else if (a == "--version") {
-      std::cout << "jtNew (jsonTools) 0.1.0\n";
+      std::cout << "jtNew (jsonTools) " << jt::JT_VERSION << "\n";
       return 0;
     } else if (literal == nullptr) {
       jt::reject_empty_positional(a);
