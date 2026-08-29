@@ -212,5 +212,11 @@ These were open during design and are now settled:
   `<type>`"), and an out-of-range array index errors with the array's bounds
   **instead of silently null-padding the array up to the index** (REQUIREMENTS
   §2.4 "strict errors over silent nulls" now enforced).
+- **`-p` descends into existing array elements** (review issue 2):
+  `jtSet /items/0/x 1 -p` now works when element 0 exists (previously `-p`
+  refused arrays outright). `-p` still never creates or grows an array — a
+  missing numeric intermediate becomes an object key, and an out-of-range
+  index errors with a hint whose example command actually unlocks the next
+  index.
 - **Library API** (see `TECHNICAL_DETAILS.md` §8): verbs are `jt::` functions,
   `jt::Error` throws (CLI catches → exit), return-by-value + move.

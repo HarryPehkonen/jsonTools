@@ -124,22 +124,62 @@ void create_object_path(jsom::JsonDocument& doc, const std::string& pointer) {
   std::vector<std::string> segments = jsom::JsonPointer::parse(pointer);
   std::string prefix;
   jsom::JsonDocument* current = &doc;
-  for (const std::string& segment : segments) {
+  // Walk the intermediate segments only — the leaf is left to the caller's
+  // write (set_at), so '-' as the final segment never passes through here.
+  for (std::size_t i = 0; i + 1 < segments.size(); ++i) {
+    const std::string& segment = segments[i];
+    const std::string here = prefix + "/" + jsom::JsonPointer::escape_segment(segment);
     if (current->is_array()) {
-      throw Error(display_pointer(prefix), "-p will not create or grow arrays",
-                  "append the element first with the '-' sentinel, "
-                  "e.g. jtSet " + display_pointer(prefix) + "/- '{}'");
-    }
-    if (!current->is_object()) {
+      if (jsom::JsonPointer::is_append(segment)) {
+        throw Error(display_pointer(here), "'-' is only valid as the final segment",
+                    "append an element first, e.g. jtSet " + display_pointer(prefix) +
+                        "/- '{}'; it becomes " + display_pointer(prefix) + "/" +
+                        std::to_string(current->size()) + ", then re-run this command");
+      }
+      if (!jsom::JsonPointer::is_array_index(segment)) {
+        throw Error(display_pointer(here),
+                    "'" + segment + "' is not an array index",
+                    "array elements are addressed by index, e.g. " +
+                        display_pointer(prefix) + "/0");
+      }
+      // to_array_index overflows to an exception for indexes beyond size_t;
+      // such an index is certainly out of range, so keep the default.
+      std::size_t index = current->size();
+      try {
+        index = jsom::JsonPointer::to_array_index(segment);
+      } catch (const jsom::JsonPointerException&) {
+      }
+      const std::size_t size = current->size();
+      if (index >= size) {
+        std::string hint;
+        if (index == size) {
+          hint = "append an element first, e.g. jtSet " + display_pointer(prefix) +
+                 "/- '{}'; it becomes " + display_pointer(prefix) + "/" +
+                 std::to_string(size) + ", then re-run this command";
+        } else if (size == 0) {
+          hint = "the array at " + display_pointer(prefix) +
+                 " is empty; arrays grow one element at a time with the '-' sentinel";
+        } else {
+          hint = "the array at " + display_pointer(prefix) + " has " +
+                 std::to_string(size) + " elements (indexes 0-" +
+                 std::to_string(size - 1) +
+                 "); arrays grow one element at a time with the '-' sentinel";
+        }
+        throw Error(display_pointer(here),
+                    "index " + segment + " is out of range", hint);
+      }
+      current = &(*current)[index];
+    } else if (current->is_object()) {
+      if (!current->contains(segment)) {
+        current->set(segment, jsom::JsonDocument::make_object());
+      }
+      current = &(*current)[segment];
+    } else {
       throw Error(display_pointer(prefix),
                   "cannot create '" + segment + "' inside a " + type_name(*current),
                   "remove or replace that value first");
     }
-    if (!current->contains(segment)) {
-      current->set(segment, jsom::JsonDocument::make_object());
-    }
-    current = &(*current)[segment];
-    prefix += "/" + jsom::JsonPointer::escape_segment(segment);
+    prefix = here;
   }
 }
 

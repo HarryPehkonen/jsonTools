@@ -59,5 +59,10 @@ echo "   (exit $?)"
 echo -n 'set scalar tunnel    -> '
 echo '{"a":5}' | ./jtSet /a/b 1 2>&1 >/dev/null
 echo "   (exit $?)"
+echo -n 'set -p into array element -> '
+echo '{"items":[{"sub":1}]}' | ./jtSet /items/0/x/y 1 -p
+echo -n 'set -p index==size  -> '
+echo '{"items":[1,2]}' | ./jtSet /items/2/x 1 -p 2>&1 >/dev/null
+echo "   (exit $?)"
 echo -n 'pretty:'
 echo '{"a":1}' | ./jtGet / --pretty

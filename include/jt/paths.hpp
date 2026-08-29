@@ -37,8 +37,11 @@ std::string type_name(const jsom::JsonDocument& doc);
 void require_parent(const jsom::JsonDocument& doc, const std::string& pointer,
                     const std::string& fallback_hint);
 
-// Create every missing object along `pointer`, mkdir -p style. Never creates
-// or grows an array, and never tunnels through a scalar (both throw).
+// Create every missing object along `pointer`'s intermediate segments, mkdir
+// -p style; the leaf itself is left to the caller's write. Descends into an
+// existing array by in-range index but never creates or grows an array (a
+// missing intermediate key becomes an object key), never tunnels through a
+// scalar, and rejects '-' anywhere but the leaf (all throw).
 void create_object_path(jsom::JsonDocument& doc, const std::string& pointer);
 
 // Turn an element-relative key path ("name", "name/last") into a pointer

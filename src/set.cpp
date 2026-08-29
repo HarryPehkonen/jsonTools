@@ -10,9 +10,11 @@ jsom::JsonDocument set(jsom::JsonDocument doc, const std::string& path,
   const std::string pointer = normalize_pointer(path);
   if (pointer.empty()) return literal; // setting the root replaces the document
 
-  const std::string parent = jsom::JsonPointer::get_parent(pointer);
   if (mkdir_p) {
-    if (doc.find(parent) == nullptr) create_object_path(doc, parent);
+    create_object_path(doc, pointer);
+    // The parents exist now; this validates the leaf's own container (an
+    // array's index range or a scalar in the way).
+    require_parent(doc, pointer, "");
   } else {
     require_parent(doc, pointer, "pass -p to create the missing objects");
   }

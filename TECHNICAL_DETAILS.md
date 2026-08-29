@@ -113,18 +113,22 @@ document (or nothing + exit 0 under `--check-only`).
 ```
 jtSet <path> <literal> [-p]
 ```
-Resolve the parent of `<path>` via `JsonPointer::get_parent`. If any
-intermediate segment is missing: **error unless `-p`** (which creates
-intermediate **objects only** — `-p` never creates or grows arrays; use the
-`-` append sentinel `jtSet /items/- ...` for array growth). The parent must
-also be a container that can hold the leaf (`require_parent`): a scalar
-parent errors ("cannot put a value inside a `<type>`"), and an array parent
-accepts only an in-range index or `-` — an out-of-range index errors
-("index N is out of range", with the array's actual bounds) **instead of
-null-padding**, and a non-index leaf errors ("'X' is not an array index").
-Then `set` the literal at the leaf.
+Resolve the path with `require_parent` (missing intermediate → **error
+unless `-p`**). With `-p`, `create_object_path` first walks the pointer's
+intermediate segments: it creates missing ones as **objects** (a numeric
+segment becomes an object key — `-p` never creates or grows an array) and
+descends into existing array elements by in-range index. The container that
+receives the leaf must be able to hold it: a scalar parent errors ("cannot
+put a value inside a `<type>`"), and an array parent accepts only an
+in-range index or `-` — an out-of-range index errors ("index N is out of
+range", with the array's actual bounds and an append hint that actually
+unlocks the next index) **instead of null-padding**, and a non-index leaf
+errors ("'X' is not an array index"). Then `set` the literal at the leaf.
 
 - `-p` is the `mkdir -p` analog: without it, a missing parent is an error.
+- `-p` never grows arrays; use the `-` append sentinel `jtSet /items/- ...`
+  for array growth. An intermediate `-` errors ("'-' is only valid as the
+  final segment").
 - The container guard runs before `set_at`, so these cases surface as jt
   errors with the offending value named, not as a wrapped
   `JsonPointerTypeException`.
