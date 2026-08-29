@@ -26,6 +26,13 @@ bool take_global(const std::string& arg, const char* tool, const char* usage,
   return false;
 }
 
+void reject_empty_positional(const std::string& arg) {
+  if (arg.empty()) {
+    fail("<args>", "empty argument",
+         "an empty string is usually a shell-quoting mistake; the root is spelled '/'");
+  }
+}
+
 std::string option_value(int argc, char* argv[], int& index, const char* option) {
   if (index + 1 >= argc) {
     fail("<args>", std::string(option) + " needs a value");

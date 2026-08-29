@@ -92,6 +92,12 @@ the message names exactly where the walk stopped.
 ### 2.3 Argument conventions
 
 - Positional args are JSON Pointers; options are `--kebab-case`.
+- An empty-string positional is rejected by every main (review issue 12): `''`
+  is almost always a shell-quoting mistake, and for paths it silently meant
+  the root — `jtSet "" 5` replaced the whole document. The guard
+  (`reject_empty_positional`, args.cpp) fires at argument-parse time, before
+  stdin is read; the root is spelled `/`, and the library verbs still accept
+  `""` as the root pointer for in-process callers.
 - Values that are JSON **literals** are passed as JSON text and parsed with
   `parse_document` — never treated as bare strings. (So `jtSet /x '"hi"'`
   sets a string; `jtSet /x '18'` sets a number; `jtSet /x 'null'` sets null.)

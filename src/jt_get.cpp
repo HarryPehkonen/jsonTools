@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
       default_text = jt::option_value(argc, argv, i, "--default");
       have_default = true;
     } else {
+      jt::reject_empty_positional(arg);
       positional.push_back(arg);
     }
   }

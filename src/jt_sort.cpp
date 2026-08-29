@@ -28,6 +28,7 @@ int main(int argc, char* argv[]) {
       // takes; sort keys are element-relative, so they never start with '/'.
       list_path = arg;
     } else {
+      jt::reject_empty_positional(arg);
       keys.push_back({arg, false});
     }
   }

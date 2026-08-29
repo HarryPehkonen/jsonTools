@@ -16,6 +16,11 @@ struct GlobalArgs {
 bool take_global(const std::string& arg, const char* tool, const char* usage,
                  GlobalArgs& globals);
 
+// Rejects a positional argument that is the empty string (review issue 12):
+// '' reaching a tool is almost always a shell-quoting mistake, and for paths
+// it silently meant the root. Root is spelled '/'.
+void reject_empty_positional(const std::string& arg);
+
 // Reads the value that follows an option, failing with a usable message when
 // it is missing. `index` is advanced past the value.
 std::string option_value(int argc, char* argv[], int& index, const char* option);

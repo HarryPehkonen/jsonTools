@@ -22,6 +22,7 @@ int main(int argc, char* argv[]) {
     } else if (arg == "-p") {
       mkdir_p = true;
     } else {
+      jt::reject_empty_positional(arg);
       positional.push_back(arg);
     }
   }

@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
       // As with jtSort: the optional listPath is absolute, the key is not.
       list_path = arg;
     } else if (!have_key) {
+      jt::reject_empty_positional(arg);
       key_path = arg;
       have_key = true;
     } else {

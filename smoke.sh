@@ -53,6 +53,9 @@ echo "   (exit $?)"
 echo -n 'set non-index        -> '
 echo '{"a":[1,2]}' | ./jtSet /a/name 9 2>&1 >/dev/null
 echo "   (exit $?)"
+echo -n 'set empty path       -> '
+echo '{"a":1}' | ./jtSet "" 5 2>&1 >/dev/null
+echo "   (exit $?)"
 echo -n 'move out-of-range    -> '
 echo '{"src":1,"dst":[1,2]}' | ./jtMove /src /dst/5 2>&1 >/dev/null
 echo "   (exit $?)"

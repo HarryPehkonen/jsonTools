@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
     } else if (arg == "--max-size") {
       opts.max_size = jt::option_number(argc, argv, i, "--max-size");
     } else if (!have_file) {
+      jt::reject_empty_positional(arg);
       file = arg;
       have_file = true;
     } else {

@@ -230,5 +230,12 @@ These were open during design and are now settled:
   scalar ("cannot look up 'x' inside a `<type>`") — each at the failing
   segment's path, so `jtGet /a/b/c` says exactly which of `/a`, `/a/b`,
   `/a/b/c` is the problem.
+- **Empty positional arguments are rejected** (review issue 12): every main
+  errors on an empty-string positional ("empty argument ... usually a
+  shell-quoting mistake; the root is spelled '/'") instead of acting on it —
+  `jtSet '' 5` used to replace the whole document, because '' normalized to
+  the root pointer. Root stays spellable as `/` (e.g. `jtGet /`), `jtNew`
+  with no arguments still defaults to `{}`, and the library verbs are
+  unchanged (`jt::get(doc, "")` remains the root for in-process callers).
 - **Library API** (see `TECHNICAL_DETAILS.md` §8): verbs are `jt::` functions,
   `jt::Error` throws (CLI catches → exit), return-by-value + move.

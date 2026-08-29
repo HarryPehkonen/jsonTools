@@ -32,11 +32,20 @@ add_executable(jt_tests
   test_type.cpp
   test_keys.cpp
   test_values.cpp
+  test_mains.cpp
 )
 
 target_link_libraries(jt_tests PRIVATE jt_core ${JT_GTEST_LIBS})
 target_compile_options(jt_tests PRIVATE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+
+# test_mains.cpp spawns the real jt* binaries (review issue 12's rejection
+# lives in the mains, not the library): give it their absolute path and make
+# sure they exist before the tests run.
+target_compile_definitions(jt_tests PRIVATE JT_BIN_DIR="${CMAKE_BINARY_DIR}")
+add_dependencies(jt_tests
+  jtNew jtFrom jtSet jtMove jtCopy jtRemove jtGet jtSelect jtZip jtSort
+  jtFilter jtLen jtType jtKeys jtValues)
 
 # The brief runs `./build/jt_tests`, so keep the binary at the build root.
 set_target_properties(jt_tests PROPERTIES

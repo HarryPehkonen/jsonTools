@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
       mode = arg == "--if-not-set" ? jt::DestMode::IfNotSet : jt::DestMode::Replace;
       mode_set = true;
     } else {
+      jt::reject_empty_positional(arg);
       positional.push_back(arg);
     }
   }

@@ -1,3 +1,4 @@
+#include "jt/args.hpp"
 #include "jt/common.hpp"
 
 #include <iostream>
@@ -16,6 +17,7 @@ int main(int argc, char* argv[]) {
       std::cout << "jtNew (jsonTools) 0.1.0\n";
       return 0;
     } else if (literal == nullptr) {
+      jt::reject_empty_positional(a);
       literal = argv[i];
     } else {
       std::cerr << "Error at <args>: unexpected argument '" << a << "'\n";

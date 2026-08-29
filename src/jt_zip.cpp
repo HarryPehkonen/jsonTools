@@ -22,6 +22,7 @@ int main(int argc, char* argv[]) {
     } else if (arg == "--overwrite") {
       overwrite = true;
     } else {
+      jt::reject_empty_positional(arg);
       positional.push_back(arg);
     }
   }

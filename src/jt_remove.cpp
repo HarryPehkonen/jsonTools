@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
     if (jt::take_global(arg, "jtRemove", kUsage, globals)) {
       if (globals.exit_now) return 0;
     } else {
+      jt::reject_empty_positional(arg);
       positional.push_back(arg);
     }
   }
