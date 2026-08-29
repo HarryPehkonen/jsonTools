@@ -40,28 +40,41 @@ priority.
 
 ## B. Remaining GLM-review items (docs/REVIEW-glm53-20260828.md)
 
-Deferred by design from the fix pass — none were in scope for batches 1-2:
+**Status of batches D and E: PARKED (2026-08-29, Harri's decision).**
+Reopen an item ONLY when a real-world failing case appears — no fix without
+evidence from actual use. "It might be nice" is not a reopening reason.
+Parked items:
 
-4. **No `--` end-of-options.** Flag-looking values unrepresentable:
-   `jtSet /cmd --help` triggers help; unknown flags silently become
-   positionals in most tools (only jtFilter reports them).
-6. **Transitive-include fragility.** jt_get.cpp, jt_filter.cpp, jt_sort.cpp
-   use jt::fail/jt::run_cli without including jt/errors.hpp.
+4. **No `--` end-of-options.** (Real case that would reopen: needing to set
+   a *value* that begins with `--`.)
+6. ~~Transitive-include fragility~~ (verified already fixed; pinned by
+   test_includes.cpp)
 8. (folded into A.4 above)
-9. **`fail` duplicates `Error::format`** — DRY.
-10. **Two Args structs** — common.hpp's `Args` appears vestigial; verify and
-    remove.
+9. ~~`fail` duplicates `Error::format`~~ (fixed, B.9)
+10. ~~Two Args structs~~ (fixed, B.10)
 13. (folded into A.3 above — stdout/stream-state checking)
-14. **Help is one line per tool**; flags undocumented in-tool.
+14. **Help is one line per tool** — the one-liner is a feature for pipe
+    tools; reopen only if a real user is actually confused.
 
-## Suggested batching
+Also parked, from section A:
 
-- **Batch C (quick wins):** A.1, A.2, B.6, B.9, B.10 — mechanical, low risk,
-  one careful session.
-- **Batch D (semantics):** B.4 (`--` end-of-options touches every main —
-  design it once in args.hpp first), A.5, B.14.
-- **Batch E (robustness):** A.3 — needs pipe/EOF test scaffolding.
+- **A.5** Levenshtein threshold — distance ≤2 works on real keys; reopen
+  when a real typo goes unsuggested.
+- **A.3** I/O failure paths — default SIGPIPE death is Unix-correct for a
+  pipe tool; truncated-stdin test is marginal.
 
-Working method that worked: strict TDD per item (RED → watch fail → minimal
-GREEN → full suite → commit naming the item), as in docs/fix-brief-batch1.md
-and batch2.
+## Done
+
+- Batch A.1, A.2, B.6, B.9, B.10 — fixed (commits c84030a..7f52e31,
+  216/216 green, from-scratch build clean).
+- GLM-review issues 1, 2, 3, 5, 7, 12 — fixed (commits d9f4178..cc37e7c,
+  strict TDD, 212 tests at the time).
+
+
+## Decision
+
+Shipped as v0.1.0 (2026-08-29). The tool set is complete for its purpose:
+one mutation per binary, composable, strict errors, 216 tests green,
+from-scratch build clean. Remaining items are parked, not owed — the
+backlog's standing rule is the project's oldest one: **no fix without a
+failing real-world case.**
