@@ -82,6 +82,13 @@ A helper `nearest_key(doc, path, candidate)` computes the closest existing
 key by edit distance and returns a suggestion string — shared, so `jtGet`,
 `jtMove`, `jtRemove`, `jtFilter` all get typo hints for free.
 
+`require_at` (paths.cpp) resolves a pointer by walking its segments and, at
+the first one that fails, throws a *classified* error instead of a flat
+"path not found": missing object key (with the typo hint), array addressing
+errors (non-index segment, out-of-range index with bounds, `-` on a read),
+or tunneling through a scalar. The error's path is the failing segment, so
+the message names exactly where the walk stopped.
+
 ### 2.3 Argument conventions
 
 - Positional args are JSON Pointers; options are `--kebab-case`.

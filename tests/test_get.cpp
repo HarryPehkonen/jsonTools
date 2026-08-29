@@ -71,4 +71,24 @@ TEST(JtGet, RelativePathIsAnError) {
   EXPECT_THROW(jt::get(doc(R"({"a":1})"), "a"), jt::Error);
 }
 
+TEST(JtGet, AnOutOfRangeIndexIsNotReportedAsNotFound) {
+  // The three find()==nullptr failures must not share one message.
+  try {
+    jt::get(doc(R"({"list":[1,2]})"), "/list/9");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("out of range"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("2 elements"), std::string::npos);
+  }
+}
+
+TEST(JtGet, TunnelingThroughAScalarIsNotReportedAsNotFound) {
+  try {
+    jt::get(doc(R"({"a":"s"})"), "/a/b");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("inside a string"), std::string::npos);
+  }
+}
+
 }  // namespace

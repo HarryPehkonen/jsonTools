@@ -18,7 +18,10 @@ std::string normalize_pointer(const std::string& path);
 // How a pointer is written in an error message ("" reads as "/").
 std::string display_pointer(const std::string& pointer);
 
-// Navigate, or throw jt::Error("path not found") with a typo hint.
+// Navigate to `pointer`, or throw jt::Error naming the exact failing segment
+// and why it failed: "path not found" (missing object key, with a typo hint),
+// "'k' is not an array index" / "index N is out of range" (array addressing),
+// or "cannot look up 'k' inside a <type>" (tunneling through a scalar).
 const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc,
                                      const std::string& pointer);
 

@@ -72,6 +72,100 @@ TEST(JtPaths, RequireParentRejectsANonIndexLeafOnAnArray) {
   }
 }
 
+// --- require_at classification (review issue 3) ---
+// find()==nullptr conflates three failures; each must get its own message,
+// reported at the exact failing segment of the walk.
+
+TEST(JtPaths, RequireAtReportsAMissingKeyAtTheFailingSegment) {
+  // The missing key is '/user/nmae', not the deeper '/user/nmae/x' that was
+  // asked for — and it is the one case that keeps the typo hint.
+  try {
+    jt::require_at(doc(R"({"user":{"name":1}})"), "/user/nmae/x");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_EQ(e.path(), "/user/nmae");
+    EXPECT_NE(e.problem().find("path not found"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("did you mean /user/name?"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtReportsAnOutOfRangeIndexAtTheFailingSegment) {
+  try {
+    jt::require_at(doc(R"({"items":[1,2]})"), "/items/5/x");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_EQ(e.path(), "/items/5");
+    EXPECT_NE(e.problem().find("index 5 is out of range"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("2 elements"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtReportsAnOutOfRangeIndexOnALeaf) {
+  try {
+    jt::require_at(doc(R"({"items":[1,2]})"), "/items/5");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_EQ(e.path(), "/items/5");
+    EXPECT_NE(e.problem().find("index 5 is out of range"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("indexes 0-1"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtNamesAnEmptyArrayInTheOutOfRangeHint) {
+  try {
+    jt::require_at(doc(R"({"items":[]})"), "/items/0");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("index 0 is out of range"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("array at /items is empty"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtReportsTunnelingThroughAScalar) {
+  try {
+    jt::require_at(doc(R"({"a":5})"), "/a/b/c");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_EQ(e.path(), "/a/b");
+    EXPECT_NE(e.problem().find("inside a number"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("/a"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtReportsTunnelingThroughTheDocumentRoot) {
+  try {
+    jt::require_at(doc("5"), "/a/b");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("inside a number"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtRejectsAKeyNameOnAnArray) {
+  try {
+    jt::require_at(doc(R"({"items":[1,2]})"), "/items/name/x");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_EQ(e.path(), "/items/name");
+    EXPECT_NE(e.problem().find("'name' is not an array index"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtRejectsTheAppendSentinelOnARead) {
+  try {
+    jt::require_at(doc(R"({"items":[1,2]})"), "/items/-");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("'-' names no existing element"), std::string::npos);
+  }
+}
+
+TEST(JtPaths, RequireAtStillResolvesTheRoot) {
+  const jsom::JsonDocument d = doc(R"({"a":1})");
+  EXPECT_EQ(&jt::require_at(d, ""), &d);
+  EXPECT_EQ(jt::require_at(d, "/a").to_json(), "1");
+}
+
 TEST(JtPaths, CreateObjectPathCreatesOnlyMissingObjects) {
   // The leaf itself is left to the caller's write ('c' must not appear).
   auto d = doc("{}");

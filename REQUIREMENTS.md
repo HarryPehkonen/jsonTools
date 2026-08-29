@@ -134,6 +134,10 @@ Error at <path>: <problem>. <suggestion>
 - Paths are JSON Pointers so they can be pasted straight into a tool.
 - `<suggestion>` includes a Levenshtein "did you mean `/usr`?" typo hint where
   the failing path resembles a real key.
+- Read-side lookups (`jtGet`, `jtMove`/`jtCopy` sources, `jtRemove`, …) do not
+  collapse every failure into "path not found": a missing key, an out-of-range
+  array index, and a path that tunnels through a scalar each get their own
+  message, reported at the exact failing segment (review issue 3).
 - Exit code non-zero on any error; the document is not emitted on failure.
 
 ## 7. Safety rules
@@ -218,5 +222,13 @@ These were open during design and are now settled:
   missing numeric intermediate becomes an object key, and an out-of-range
   index errors with a hint whose example command actually unlocks the next
   index.
+- **Read-side error classification** (review issue 3): `require_at` walks the
+  pointer and classifies the first segment that fails to resolve — a missing
+  object key ("path not found", still with the typo hint), an array addressing
+  error ("'x' is not an array index" / "index N is out of range" with the
+  array's bounds / "'-' names no existing element"), or tunneling through a
+  scalar ("cannot look up 'x' inside a `<type>`") — each at the failing
+  segment's path, so `jtGet /a/b/c` says exactly which of `/a`, `/a/b`,
+  `/a/b/c` is the problem.
 - **Library API** (see `TECHNICAL_DETAILS.md` §8): verbs are `jt::` functions,
   `jt::Error` throws (CLI catches → exit), return-by-value + move.

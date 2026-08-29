@@ -62,11 +62,77 @@ std::string suggest_for(const jsom::JsonDocument& doc, const std::string& pointe
 
 const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc,
                                      const std::string& pointer) {
-  const jsom::JsonDocument* found = doc.find(pointer);
-  if (found == nullptr) {
-    throw Error(display_pointer(pointer), "path not found", suggest_for(doc, pointer));
+  // find()==nullptr alone cannot tell *why* a path failed, so walk the
+  // segments and classify at the first one that does not resolve (review
+  // issue 3): a missing object key, an array addressing error, or a path
+  // that tunnels through a scalar. Each gets its own message, reported at
+  // the failing segment.
+  std::vector<std::string> segments;
+  try {
+    segments = jsom::JsonPointer::parse(pointer);
+  } catch (const jsom::JsonPointerException&) {
+    // Callers run normalize_pointer first; a malformed pointer here can
+    // only fall back to the generic message.
+    throw Error(display_pointer(pointer), "path not found", "");
   }
-  return *found;
+
+  std::string prefix;
+  const jsom::JsonDocument* current = &doc;
+  for (const std::string& segment : segments) {
+    const std::string child =
+        prefix + "/" + jsom::JsonPointer::escape_segment(segment);
+    if (current->is_object()) {
+      if (!current->contains(segment)) {
+        // A genuinely absent key — the one case that is truly "not found";
+        // it keeps the typo hint.
+        throw Error(display_pointer(child), "path not found",
+                    suggest_for(doc, pointer));
+      }
+      current = &(*current)[segment];
+    } else if (current->is_array()) {
+      if (jsom::JsonPointer::is_append(segment)) {
+        throw Error(display_pointer(child), "'-' names no existing element",
+                    "the '-' sentinel only appends on write; read by index, e.g. " +
+                        display_pointer(prefix) + "/0");
+      }
+      if (!jsom::JsonPointer::is_array_index(segment)) {
+        throw Error(display_pointer(child),
+                    "'" + segment + "' is not an array index",
+                    "array elements are addressed by index, e.g. " +
+                        display_pointer(prefix) + "/0");
+      }
+      // to_array_index overflows to an exception for indexes beyond size_t;
+      // such an index is certainly out of range, so keep the default.
+      std::size_t index = current->size();
+      try {
+        index = jsom::JsonPointer::to_array_index(segment);
+      } catch (const jsom::JsonPointerException&) {
+      }
+      const std::size_t size = current->size();
+      if (index >= size) {
+        std::string hint;
+        if (size == 0) {
+          hint = "the array at " + display_pointer(prefix) + " is empty";
+        } else {
+          hint = "the array at " + display_pointer(prefix) + " has " +
+                 std::to_string(size) + " elements (indexes 0-" +
+                 std::to_string(size - 1) + ")";
+        }
+        throw Error(display_pointer(child),
+                    "index " + segment + " is out of range", hint);
+      }
+      current = &(*current)[index];
+    } else {
+      // The path tunnels through a scalar, which holds no keys at all.
+      throw Error(display_pointer(child),
+                  "cannot look up '" + segment + "' inside a " +
+                      type_name(*current),
+                  "use " + display_pointer(prefix) + " to address the " +
+                      type_name(*current) + " itself");
+    }
+    prefix = child;
+  }
+  return *current;
 }
 
 void require_parent(const jsom::JsonDocument& doc, const std::string& pointer,
