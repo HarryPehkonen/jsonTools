@@ -1,5 +1,9 @@
 # jsonTools — Requirements & Design
 
+> **Pre-release:** jsonTools is 0.x; verb semantics, flags, and error
+> messages may change without backwards compatibility. This document
+> describes the current design, not a stable contract.
+
 > Draft for review. Every "**OPEN**" marker is a decision not yet final; every
 > other statement is a settled requirement from design discussion (Aug 2026).
 

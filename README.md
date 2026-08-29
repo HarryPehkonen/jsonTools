@@ -1,5 +1,11 @@
 # jsonTools
 
+> **Status: pre-release.** jsonTools is at version 0.x and actively evolving.
+> Nothing about the current behavior is guaranteed — verb semantics, flags,
+> error messages, and even the verb set may change without notice or
+> backwards compatibility. If you script against it today, pin your
+> expectations to the exact version you tested against.
+
 Pipe-composable JSON mutation utilities. A thin, safety-first command-line
 layer over [JSOM](https://github.com/HarryPehkonen/JSOM).
 
@@ -43,7 +49,7 @@ cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local
 sudo cmake --install build
 ```
 
-This installs the 14 CLI binaries, the static `libjt_core.a`, and the `jt/`
+This installs the 15 CLI binaries, the static `libjt_core.a`, and the `jt/`
 headers (for use as a library).
 
 ## The verbs
@@ -51,7 +57,7 @@ headers (for use as a library).
 ```
 jtNew      jtFrom      jtSet      jtMove     jtCopy
 jtRemove   jtGet       jtSelect   jtZip      jtSort
-jtFilter   jtLen       jtType     jtKeys
+jtFilter   jtLen       jtType     jtKeys     jtValues
 ```
 
 All paths are strict [RFC 6901 JSON Pointers](https://datatracker.ietf.org/doc/html/rfc6901).
@@ -137,6 +143,18 @@ $ echo '{"items":[1,2,3]}' | jtLen /items /count
 $ echo '{"a":1,"b":2}' | jtKeys
 ["a","b"]
 ```
+
+### Keys + values round-trip through jtZip
+
+```bash
+$ echo '{"o":{"a":1,"b":2}}' | jtKeys /o /ks | jtValues /o /vs | jtZip /ks /vs
+{"a":1,"b":2}
+```
+
+(Form B keeps the document intact so introspection results can feed the next
+step — `jtKeys`/`jtValues` write to a destination instead of replacing the
+document. Here the object at `/o` is decomposed into keys and values, then
+re-assembled by `jtZip`.)
 
 ### Filter → sort → project (a real chain)
 
