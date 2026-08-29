@@ -1,5 +1,7 @@
 #include "jt/errors.hpp"
 
+#include <jsom/json_pointer.hpp>
+
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -49,9 +51,14 @@ std::string nearest_candidate(const std::vector<std::string>& candidates,
 }
 
 std::string nearest_key(const std::vector<std::string>& candidates,
-                        const std::string& target) {
+                         const std::string& target) {
   std::string best_key = nearest_candidate(candidates, target);
-  return best_key.empty() ? "" : "did you mean /" + best_key + "?";
+  // Escape exactly like suggest_for (paths.cpp): a key containing '~' or '/'
+  // must reach the user as a valid RFC 6901 pointer segment (review issue 7).
+  return best_key.empty()
+             ? ""
+             : "did you mean /" + jsom::JsonPointer::escape_segment(best_key) +
+                   "?";
 }
 
 } // namespace jt

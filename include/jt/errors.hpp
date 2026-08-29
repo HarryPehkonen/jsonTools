@@ -39,9 +39,11 @@ class Error : public std::runtime_error {
                        const std::string& suggestion = "");
 
 // Compute a "did you mean /x?" hint against a set of candidate sibling keys.
-// Returns "" when no candidate is close enough.
+// The suggested key is RFC 6901-escaped (~0 / ~1), exactly like suggest_for,
+// so it pastes as a valid pointer. Returns "" when no candidate is close
+// enough.
 std::string nearest_key(const std::vector<std::string>& candidates,
-                        const std::string& target);
+                         const std::string& target);
 
 // The raw key behind nearest_key(), for callers that need to build a full
 // pointer rather than a bare "/key". Returns "" when nothing is close enough.
