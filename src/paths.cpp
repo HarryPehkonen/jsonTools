@@ -60,6 +60,21 @@ std::string suggest_for(const jsom::JsonDocument& doc, const std::string& pointe
   return "";
 }
 
+// The bounds half of every out-of-range array hint (FIX_ME A.1): require_at,
+// require_parent and create_object_path all describe the offending array the
+// same way, so the wording lives here once and each call site appends only
+// its own remediation. `with_indexes` drops the "(indexes 0-M)" clause for
+// require_parent's one-past-the-end case, where the append advice replaces
+// the range.
+static std::string array_bounds_hint(const std::string& pointer,
+                                     std::size_t size, bool with_indexes) {
+  std::string hint = "the array at " + display_pointer(pointer);
+  if (size == 0) return hint + " is empty";
+  hint += " has " + std::to_string(size) + " elements";
+  if (with_indexes) hint += " (indexes 0-" + std::to_string(size - 1) + ")";
+  return hint;
+}
+
 const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc,
                                      const std::string& pointer) {
   // find()==nullptr alone cannot tell *why* a path failed, so walk the
@@ -110,16 +125,9 @@ const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc,
       }
       const std::size_t size = current->size();
       if (index >= size) {
-        std::string hint;
-        if (size == 0) {
-          hint = "the array at " + display_pointer(prefix) + " is empty";
-        } else {
-          hint = "the array at " + display_pointer(prefix) + " has " +
-                 std::to_string(size) + " elements (indexes 0-" +
-                 std::to_string(size - 1) + ")";
-        }
         throw Error(display_pointer(child),
-                    "index " + segment + " is out of range", hint);
+                    "index " + segment + " is out of range",
+                    array_bounds_hint(prefix, size, true));
       }
       current = &(*current)[index];
     } else {
@@ -166,16 +174,12 @@ void require_parent(const jsom::JsonDocument& doc, const std::string& pointer,
     const std::size_t size = container->size();
     if (index < size) return;
     std::string hint;
-    if (size == 0) {
-      hint = "the array at " + display_pointer(parent) + " is empty";
-    } else if (index == size) {
-      hint = "the array at " + display_pointer(parent) + " has " +
-             std::to_string(size) +
-             " elements; append with the '-' sentinel instead";
+    if (size > 0 && index == size) {
+      // One past the end: the append advice replaces the index range.
+      hint = array_bounds_hint(parent, size, false) +
+             "; append with the '-' sentinel instead";
     } else {
-      hint = "the array at " + display_pointer(parent) + " has " +
-             std::to_string(size) + " elements (indexes 0-" +
-             std::to_string(size - 1) + ")";
+      hint = array_bounds_hint(parent, size, true);
     }
     throw Error(display_pointer(pointer),
                 "index " + leaf + " is out of range", hint);
@@ -222,14 +226,9 @@ void create_object_path(jsom::JsonDocument& doc, const std::string& pointer) {
           hint = "append an element first, e.g. jtSet " + display_pointer(prefix) +
                  "/- '{}'; it becomes " + display_pointer(prefix) + "/" +
                  std::to_string(size) + ", then re-run this command";
-        } else if (size == 0) {
-          hint = "the array at " + display_pointer(prefix) +
-                 " is empty; arrays grow one element at a time with the '-' sentinel";
         } else {
-          hint = "the array at " + display_pointer(prefix) + " has " +
-                 std::to_string(size) + " elements (indexes 0-" +
-                 std::to_string(size - 1) +
-                 "); arrays grow one element at a time with the '-' sentinel";
+          hint = array_bounds_hint(prefix, size, true) +
+                 "; arrays grow one element at a time with the '-' sentinel";
         }
         throw Error(display_pointer(here),
                     "index " + segment + " is out of range", hint);
