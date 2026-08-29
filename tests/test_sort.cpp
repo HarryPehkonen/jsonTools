@@ -103,4 +103,46 @@ TEST(JtSort, MissingListPathIsAnError) {
   EXPECT_THROW(jt::sort(doc(R"({"items":[]})"), "/nope", {}), jt::Error);
 }
 
+// --- key validation (review issue 5) ---
+
+TEST(JtSort, AnEmptyKeyIsAnErrorEvenOnAValidList) {
+  // jtFilter rejects an empty key path; jtSort must not accept one either.
+  try {
+    jt::sort(doc(R"([{"n":1},{"n":2}])"), "/", {{"", false}});
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("empty key path"), std::string::npos);
+  }
+}
+
+TEST(JtSort, AnEmptyDescendingKeyIsAnErrorToo) {
+  // --desc-for "" reaches sort() as a descending SortKey; same validation.
+  try {
+    jt::sort(doc(R"([{"n":1}])"), "/", {{"n", false}, {"", true}});
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("empty key path"), std::string::npos);
+  }
+}
+
+TEST(JtSort, KeysAreValidatedBeforeTheListIsResolved) {
+  // The key is bad regardless of what the list turns out to be, so the
+  // empty-key error must win over "cannot sort a number" (jtFilter already
+  // validates its key before touching the document).
+  try {
+    jt::sort(doc(R"({"items":5})"), "/items", {{"", false}});
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("empty key path"), std::string::npos);
+    EXPECT_EQ(e.problem().find("cannot sort"), std::string::npos);
+  }
+}
+
+TEST(JtSort, NoKeysSortsTheWholeDocumentByNaturalType) {
+  // Bare `jtSort` (no listPath, no keys) is decided behavior, not an
+  // accident: it natural-sorts the document itself (REQUIREMENTS §9.2).
+  auto out = jt::sort(doc(R"([3,1,2])"), "/", {});
+  EXPECT_EQ(out.to_json(), "[1,2,3]");
+}
+
 }  // namespace

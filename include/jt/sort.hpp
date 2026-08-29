@@ -14,10 +14,13 @@ struct SortKey {
   bool descending = false;
 };
 
-// Sort the list at `list_path` (default "/", the whole document) in place,
-// stably. With keys, every element must be an object carrying every key, and a
-// key's values must all share one scalar type. Without keys, the elements
-// themselves are sorted by their natural type — mixed types are an error.
+// Sort the list at `list_path` (default "/", the whole document — bare
+// `jtSort` natural-sorts the document itself) in place, stably. With keys,
+// every element must be an object carrying every key, and a key's values must
+// all share one scalar type. Keys are validated (non-empty, no leading
+// slash) before the list is resolved, like filter(). Without keys, the
+// elements themselves are sorted by their natural type — mixed types are an
+// error.
 jsom::JsonDocument sort(jsom::JsonDocument doc, const std::string& list_path,
                         const std::vector<SortKey>& keys);
 

@@ -189,12 +189,17 @@ switches to last-wins.
 ```
 jtSort [<listPath>] <key1> [--desc-for <key2> <key3>]
 ```
-Resolve the list (default `/`). Sort is **stable**. If keys are given, each
-element must be an object; sort by successive keys, each `--desc-for` key in
-reverse — `--desc-for` applies to the **next single key only** (repeat it for
-multiple descending keys). No keys → sort by element natural type: numbers
-numerically, strings lexically, **mixed types → error**. (Future: a
-`--js-coerce` flag enabling JavaScript-style comparison.)
+Validate the keys first (`relative_key_pointer`: non-empty, no leading
+slash) — before the list is resolved, exactly like `jtFilter`, so an empty
+key (a shell-quoting accident) errors as `empty key path` even when the list
+is also wrong. Then resolve the list (default `/`); sort is **stable**. If
+keys are given, each element must be an object; sort by successive keys, each
+`--desc-for` key in reverse — `--desc-for` applies to the **next single key
+only** (repeat it for multiple descending keys). No keys → sort by element
+natural type: numbers numerically, strings lexically, **mixed types →
+error**; bare `jtSort` (no arguments) is the settled spelling of that:
+natural-sort the whole document. (Future: a `--js-coerce` flag enabling
+JavaScript-style comparison.)
 
 ### 3.10 `jtFilter`
 ```

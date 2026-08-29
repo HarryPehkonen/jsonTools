@@ -80,6 +80,12 @@ std::vector<std::vector<const jsom::JsonDocument*>> collect_keys(
 jsom::JsonDocument sort(jsom::JsonDocument doc, const std::string& list_path,
                         const std::vector<SortKey>& keys) {
   const std::string pointer = normalize_pointer(list_path);
+  // Validate the keys before touching the document, exactly like filter():
+  // an empty or malformed key is bad regardless of what the list turns out
+  // to be (review issue 5).
+  for (const SortKey& key : keys) {
+    relative_key_pointer(key.key);
+  }
   const jsom::JsonDocument& list = require_at(doc, pointer);
   if (!list.is_array()) {
     throw Error(display_pointer(pointer),
