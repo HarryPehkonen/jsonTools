@@ -1,5 +1,6 @@
 #include "jt/args.hpp"
 #include "jt/common.hpp"
+#include "jt/errors.hpp"
 #include "jt/version.hpp"
 
 #include <iostream>
@@ -21,8 +22,7 @@ int main(int argc, char* argv[]) {
       jt::reject_empty_positional(a);
       literal = argv[i];
     } else {
-      std::cerr << "Error at <args>: unexpected argument '" << a << "'\n";
-      return 1;
+      jt::fail("<args>", "unexpected argument '" + a + "'");
     }
   }
 

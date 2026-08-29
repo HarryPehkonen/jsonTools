@@ -11,11 +11,9 @@ namespace jt {
 
 void fail(const std::string& path, const std::string& problem,
           const std::string& suggestion) {
-  std::cerr << "Error at " << path << ": " << problem;
-  if (!suggestion.empty()) {
-    std::cerr << ". " << suggestion;
-  }
-  std::cerr << "\n";
+  // One renderer (FIX_ME B.9): the exception's what() and the CLI's stderr
+  // line are the same string, built in the same place.
+  std::cerr << Error::format(path, problem, suggestion) << "\n";
   std::exit(1);
 }
 
