@@ -5,10 +5,6 @@
 
 namespace jt {
 
-struct Args {
-  bool pretty = false;
-};
-
 // Read all of stdin and parse it as JSON. On failure, emit an error and exit.
 jsom::JsonDocument read_stdin();
 

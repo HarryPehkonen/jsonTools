@@ -20,7 +20,7 @@
 jsonTools/
 ├── CMakeLists.txt          # builds all jt* binaries + libjt
 ├── include/jt/             # shared headers
-│   ├── common.hpp          #   read_stdin / write_stdout / error macros
+│   ├── common.hpp          #   read_stdin / write_stdout / parse_literal
 │   ├── args.hpp            #   shared arg parsing helpers
 │   └── errors.hpp          #   Error at <path>: <problem>. <suggestion>
 ├── src/
@@ -47,15 +47,17 @@ jsonTools/
 
 ### 2.1 The common I/O contract
 
-Every tool follows the identical shape:
+Every tool follows the identical shape (jt_get.cpp is the model):
 
 ```cpp
 int main(int argc, char* argv[]) {
-    jt::Args args = jt::parse(argc, argv, usage);
-    JsonDocument doc = jt::read_stdin(args);   // parse whole stdin, or error
-    jt::apply(args, doc);                       // the ONE mutation
-    jt::write_stdout(doc, args);                // compact (or --pretty)
-    return 0;
+    jt::GlobalArgs globals;   // --pretty / --help / --version via take_global
+    ... per-tool argument loop (option flags, positionals, reject_empty_positional) ...
+    return jt::run_cli([&] {
+        jsom::JsonDocument doc = jt::read_stdin();     // parse whole stdin, or error
+        doc = jt::get(std::move(doc), path, nullptr);  // the ONE mutation
+        jt::write_stdout(doc, globals.pretty);         // compact (or --pretty)
+    });
 }
 ```
 
