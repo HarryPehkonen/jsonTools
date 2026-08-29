@@ -33,6 +33,7 @@ add_executable(jt_tests
   test_keys.cpp
   test_values.cpp
   test_mains.cpp
+  test_includes.cpp
 )
 
 target_link_libraries(jt_tests PRIVATE jt_core ${JT_GTEST_LIBS})
