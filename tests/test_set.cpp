@@ -62,6 +62,27 @@ TEST(JtSet, SetsAnArrayElementByIndex) {
   EXPECT_EQ(out.to_json(), R"({"a":[1,9,3]})");
 }
 
+TEST(JtSet, SetToAnOutOfRangeArrayIndexIsAnError) {
+  // Without this guard, set() null-pads the array up to the index:
+  // {"a":[1,2,null,null,null,9]}.
+  try {
+    jt::set(doc(R"({"a":[1,2]})"), "/a/5", doc("9"));
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("out of range"), std::string::npos);
+    EXPECT_NE(e.suggestion().find("2 elements"), std::string::npos);
+  }
+}
+
+TEST(JtSet, SetWithANonIndexSegmentOnAnArrayIsAnError) {
+  try {
+    jt::set(doc(R"({"a":[1,2]})"), "/a/name", doc("9"));
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_NE(e.problem().find("not an array index"), std::string::npos);
+  }
+}
+
 TEST(JtSet, AppendSentinelAppends) {
   auto out = jt::set(doc(R"({"items":["a"]})"), "/items/-", doc(R"("b")"));
   EXPECT_EQ(out.to_json(), R"({"items":["a","b"]})");

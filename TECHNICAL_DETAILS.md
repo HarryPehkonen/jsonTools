@@ -116,12 +116,18 @@ jtSet <path> <literal> [-p]
 Resolve the parent of `<path>` via `JsonPointer::get_parent`. If any
 intermediate segment is missing: **error unless `-p`** (which creates
 intermediate **objects only** — `-p` never creates or grows arrays; use the
-`-` append sentinel `jtSet /items/- ...` for array growth). Then `set` the
-literal at the leaf.
+`-` append sentinel `jtSet /items/- ...` for array growth). The parent must
+also be a container that can hold the leaf (`require_parent`): a scalar
+parent errors ("cannot put a value inside a `<type>`"), and an array parent
+accepts only an in-range index or `-` — an out-of-range index errors
+("index N is out of range", with the array's actual bounds) **instead of
+null-padding**, and a non-index leaf errors ("'X' is not an array index").
+Then `set` the literal at the leaf.
 
 - `-p` is the `mkdir -p` analog: without it, a missing parent is an error.
-- Setting onto a scalar/array where the path implies an object key is a type
-  error (`JsonPointerTypeException` → `Error at <path>: ...`).
+- The container guard runs before `set_at`, so these cases surface as jt
+  errors with the offending value named, not as a wrapped
+  `JsonPointerTypeException`.
 
 ### 3.4 `jtMove` / `jtCopy`
 ```
@@ -135,7 +141,9 @@ Read the value at `<from>` (error if missing). For `<to>`:
 
 `jtMove` additionally removes `<from>` after a successful write. `jtCopy`
 retains `<from>`. A move where `<to>` is a child of `<from>` is an error
-(cycle).
+(cycle). `<to>` lands through `set` (§3.3), so the parent-container guard
+applies to destinations too: an out-of-range array index errors instead of
+null-padding.
 
 ### 3.5 `jtRemove`
 ```

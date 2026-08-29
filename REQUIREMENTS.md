@@ -207,5 +207,10 @@ These were open during design and are now settled:
 - `jtSelect` with zero paths = error; duplicate leaf keys = error.
 - `jtGet /` = allowed (identity, for debugging).
 - `jtType [path]` → emits the type string; `jtKeys [path]` → emits keys array.
+- **Parent-container guard** (review issue 1): `jtSet`/`jtMove`/`jtCopy`
+  destinations whose parent is a scalar error ("cannot put a value inside a
+  `<type>`"), and an out-of-range array index errors with the array's bounds
+  **instead of silently null-padding the array up to the index** (REQUIREMENTS
+  §2.4 "strict errors over silent nulls" now enforced).
 - **Library API** (see `TECHNICAL_DETAILS.md` §8): verbs are `jt::` functions,
   `jt::Error` throws (CLI catches → exit), return-by-value + move.

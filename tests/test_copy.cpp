@@ -67,6 +67,12 @@ TEST(JtCopy, CopyingIntoItsOwnChildIsAllowed) {
   EXPECT_EQ(out.to_json(), R"({"a":{"n":1,"self":{"n":1}}})");
 }
 
+TEST(JtCopy, CopyToAnOutOfRangeArrayIndexIsAnError) {
+  // copy() lands through set(), so it must inherit the array range guard
+  // instead of null-padding the destination.
+  EXPECT_THROW(jt::copy(doc(R"({"a":1,"dst":[1,2]})"), "/a", "/dst/5"), jt::Error);
+}
+
 TEST(JtCopy, AppendSentinelWorksAsADestination) {
   auto out = jt::copy(doc(R"({"a":1,"list":[]})"), "/a", "/list/-");
   EXPECT_EQ(out.to_json(), R"({"a":1,"list":[1]})");

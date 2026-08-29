@@ -29,9 +29,11 @@ std::string suggest_for(const jsom::JsonDocument& doc, const std::string& pointe
 // JSON type name: null / boolean / number / string / object / array.
 std::string type_name(const jsom::JsonDocument& doc);
 
-// Throw jt::Error when the container that would hold `pointer`'s leaf does not
-// exist. `fallback_hint` is used when no existing key looks like a typo of the
-// missing segment. A root pointer has no parent and always passes.
+// Throw jt::Error when the container that would hold `pointer`'s leaf is
+// missing or cannot hold it: a scalar can hold nothing, and an array takes
+// only an in-range index or the "-" append sentinel. `fallback_hint` is used
+// when no existing key looks like a typo of the missing segment. A root
+// pointer has no parent and always passes.
 void require_parent(const jsom::JsonDocument& doc, const std::string& pointer,
                     const std::string& fallback_hint);
 

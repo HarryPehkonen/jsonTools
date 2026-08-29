@@ -47,5 +47,17 @@ echo -n 'filter type clash   -> '
 echo '[{"a":"x"}]' | ./jtFilter a --gt 1 2>&1 >/dev/null
 echo -n 'sort mixed types    -> '
 echo '[1,"a"]' | ./jtSort 2>&1 >/dev/null
+echo -n 'set out-of-range     -> '
+echo '{"a":[1,2]}' | ./jtSet /a/5 9 2>&1 >/dev/null
+echo "   (exit $?)"
+echo -n 'set non-index        -> '
+echo '{"a":[1,2]}' | ./jtSet /a/name 9 2>&1 >/dev/null
+echo "   (exit $?)"
+echo -n 'move out-of-range    -> '
+echo '{"src":1,"dst":[1,2]}' | ./jtMove /src /dst/5 2>&1 >/dev/null
+echo "   (exit $?)"
+echo -n 'set scalar tunnel    -> '
+echo '{"a":5}' | ./jtSet /a/b 1 2>&1 >/dev/null
+echo "   (exit $?)"
 echo -n 'pretty:'
 echo '{"a":1}' | ./jtGet / --pretty

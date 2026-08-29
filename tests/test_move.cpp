@@ -74,4 +74,20 @@ TEST(JtMove, MissingDestinationIntermediateIsAnError) {
   EXPECT_THROW(jt::move(doc(R"({"a":1})"), "/a", "/x/y"), jt::Error);
 }
 
+TEST(JtMove, MoveToAnOutOfRangeArrayIndexIsAnError) {
+  // The destination guard must run before the write: without it, move()
+  // null-pads the destination array.
+  EXPECT_THROW(jt::move(doc(R"({"src":1,"dst":[1,2]})"), "/src", "/dst/5"), jt::Error);
+}
+
+TEST(JtMove, MoveOntoAScalarParentNamesTheOffendingValue) {
+  try {
+    jt::move(doc(R"({"src":1,"a":5})"), "/src", "/a/b");
+    FAIL() << "expected jt::Error";
+  } catch (const jt::Error& e) {
+    EXPECT_EQ(e.path(), "/a");
+    EXPECT_NE(e.problem().find("inside a number"), std::string::npos);
+  }
+}
+
 }  // namespace

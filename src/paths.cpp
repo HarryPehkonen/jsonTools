@@ -73,10 +73,51 @@ void require_parent(const jsom::JsonDocument& doc, const std::string& pointer,
                     const std::string& fallback_hint) {
   if (pointer.empty()) return;
   const std::string parent = jsom::JsonPointer::get_parent(pointer);
-  if (doc.find(parent) != nullptr) return;
-  std::string hint = suggest_for(doc, parent);
-  if (hint.empty()) hint = fallback_hint;
-  throw Error(display_pointer(parent), "missing intermediate path", hint);
+  const jsom::JsonDocument* container = doc.find(parent);
+  if (container == nullptr) {
+    std::string hint = suggest_for(doc, parent);
+    if (hint.empty()) hint = fallback_hint;
+    throw Error(display_pointer(parent), "missing intermediate path", hint);
+  }
+  if (container->is_object()) return; // any leaf key can live in an object
+
+  if (container->is_array()) {
+    const std::string leaf = jsom::JsonPointer::get_last_segment(pointer);
+    if (jsom::JsonPointer::is_append(leaf)) return; // "-" grows the array by one
+    if (!jsom::JsonPointer::is_array_index(leaf)) {
+      throw Error(display_pointer(pointer),
+                  "'" + leaf + "' is not an array index",
+                  "array elements are addressed by index, e.g. " +
+                      display_pointer(parent) + "/0");
+    }
+    // to_array_index overflows to an exception for indexes beyond size_t;
+    // such an index is certainly out of range, so keep the default.
+    std::size_t index = container->size();
+    try {
+      index = jsom::JsonPointer::to_array_index(leaf);
+    } catch (const jsom::JsonPointerException&) {
+    }
+    const std::size_t size = container->size();
+    if (index < size) return;
+    std::string hint;
+    if (size == 0) {
+      hint = "the array at " + display_pointer(parent) + " is empty";
+    } else if (index == size) {
+      hint = "the array at " + display_pointer(parent) + " has " +
+             std::to_string(size) +
+             " elements; append with the '-' sentinel instead";
+    } else {
+      hint = "the array at " + display_pointer(parent) + " has " +
+             std::to_string(size) + " elements (indexes 0-" +
+             std::to_string(size - 1) + ")";
+    }
+    throw Error(display_pointer(pointer),
+                "index " + leaf + " is out of range", hint);
+  }
+
+  throw Error(display_pointer(parent),
+              "cannot put a value inside a " + type_name(*container),
+              "remove or replace that value first");
 }
 
 void create_object_path(jsom::JsonDocument& doc, const std::string& pointer) {

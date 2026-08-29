@@ -16,6 +16,7 @@ endif()
 
 # One file per verb, added as each verb is implemented.
 add_executable(jt_tests
+  test_paths.cpp
   test_from.cpp
   test_set.cpp
   test_copy.cpp
