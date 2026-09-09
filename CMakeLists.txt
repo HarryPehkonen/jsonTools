@@ -79,3 +79,14 @@ foreach(tool IN ITEMS New From Set Move Copy Remove Get Select Zip Sort Filter
   install(TARGETS jt${tool} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# --- CODING_STANDARDS.md: warnings as errors for jsonTools' own targets ---
+target_compile_options(jt_core PRIVATE -Werror)
+foreach(jt_tool IN ITEMS New From Set Move Copy Remove Get Select Zip Sort Filter
+                     Len Type Keys Values)
+    if(TARGET jt${jt_tool})
+        target_compile_options(jt${jt_tool} PRIVATE -Werror)
+    endif()
+endforeach()
+if(TARGET jt_tests)
+    target_compile_options(jt_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
