@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#
+# pre-push: the FULL gate, on the tree you are about to publish.
+#
+# Requires a clean worktree (nothing uncommitted), then runs every stage — ending with a
+# pristine checkout of HEAD built from scratch, which is the check that catches "it works
+# on my machine because of a file I never committed, or one .gitignore swallowed".
+#
+# No stage list here on purpose: the default set inside tools/ci.sh is the single
+# definition of the gate, so this hook cannot drift from what `tools/ci.sh` runs by hand.
+#
+# Deliberate bypass: git push --no-verify
+#
+exec "$(git rev-parse --show-toplevel)/tools/ci.sh" --require-clean

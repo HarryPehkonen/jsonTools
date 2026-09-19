@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# pre-commit: the FAST gate.
+#
+# Cheapest signal first, and everything that is cheap: the tree is committed-or-ignored,
+# it builds with no warnings, and the tests pass (~215 ms of tests on a warm build). The
+# expensive stages — format, cli, asan, tidy, wire, version, pristine — run on push.
+#
+# Deliberate bypass: git commit --no-verify
+#
+exec "$(git rev-parse --show-toplevel)/tools/ci.sh" tree build tests

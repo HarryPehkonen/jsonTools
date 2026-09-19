@@ -35,6 +35,49 @@ cmake --build build -j
 ./build/jt_tests
 ```
 
+## Local CI (the commit gate)
+
+Formatting, linting, tests, sanitizers and repo invariants are enforced by **one
+script**, `tools/ci.sh`, and by two git hooks that call it. No hosted CI, no
+network: the same script runs by hand, on commit, and on push.
+
+```bash
+git config core.hooksPath .githooks   # once per clone: arms pre-commit + pre-push
+tools/ci.sh                           # every stage, by hand
+tools/ci.sh build tests               # just these stages, in the order given
+tools/ci.sh --list                    # what the stages are
+```
+
+| stage | what it proves |
+| --- | --- |
+| `tree` | every file is committed or ignored (untracked **and** unignored fails), `.gitignore` still covers what the gate itself creates, no tracked file is ignored |
+| `format` | every source matches the repo `.clang-format` |
+| `build` | CMake configure + build with zero warnings (`-Werror`) |
+| `tests` | `./build/jt_tests` — 216 tests |
+| `cli` | the README examples and the error contract, end to end through the real binaries |
+| `asan` | the same suite under ASan + UBSan |
+| `tidy` | clang-tidy over `src/` and `tests/`, zero findings |
+| `wire` | every tool is built, installed, depended on by the tests, exercised, and documented — the guard for the next tool you add |
+| `version` | `include/jt/version.hpp` == CMake `VERSION` == what every binary prints for `--version` |
+| `pristine` | `git archive HEAD` configures, builds and tests in a temp dir: the **committed** tree is complete |
+
+`.githooks/pre-commit` runs `tree build tests` (seconds on a warm build, so a
+commit stays cheap); `.githooks/pre-push` runs everything with `--require-clean`.
+Deliberate bypass is `git commit --no-verify` / `git push --no-verify`. Enabling
+the hooks is per clone, not per repo — a fresh clone has no gate until that one
+`git config` line runs.
+
+Machine-local settings live in `.ci.env` (gitignored; copy `.ci.env.example`).
+The one that matters most is `CI_JSOM_DIR`, the JSOM checkout to build against:
+
+- default: the sibling `../JSOM` when it exists, else CMake's `FetchContent`
+  (which needs the network and floats on JSOM's `main`);
+- every run prints the revision it built against, so a break coming from JSOM is
+  visible instead of mysterious.
+
+Per-stage output is kept in `.ci-logs/` (gitignored); on failure the tail is
+printed and the path named.
+
 ## Install
 
 One install target, two prefixes — no separate targets needed.

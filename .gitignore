@@ -1,3 +1,14 @@
+# Build directories. The pattern (not just "build/") covers the gate's own
+# build-asan/ as well as any other CMake directory name.
 build/
+build-*/
+
+# Local CI: the config is per-machine (see .ci.env.example); the logs are scratch.
+# .ci/tidy-baseline.txt is NOT ignored if it is ever added — it would be the
+# committed, shared bar for the tidy gate.
+.ci.env
+.ci-logs/
+
+# Compiled artifacts
 *.o
 *.a

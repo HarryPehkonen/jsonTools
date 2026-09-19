@@ -1,0 +1,27 @@
+# jsonTools clang-tidy configuration — the `tidy` stage of tools/ci.sh.
+#
+# Value-only, like JSOM's: real bug patterns and performance, nothing stylistic.
+# Style lives in clang-format; the full check families were measured to produce
+# ~120 findings on this codebase's conventions, which is how a gate gets ignored.
+Checks: '-*,bugprone-*,-bugprone-easily-swappable-parameters,performance-*'
+
+# HeaderFilterRegex decides which INCLUDED files get reported. It must not match
+# the sibling JSOM checkout: those findings are JSOM's to fix, and a gate that
+# fails on code jsonTools cannot change is a gate you learn to bypass. (Measured
+# 2026-09-19: an unfiltered run reported 10 of 19 findings inside JSOM's headers.)
+#
+# Note the paths are absolute in the compilation database, so the patterns are
+# matched as substrings: "include/jt/" cannot appear in a JSOM header path, and
+# "jsonTools/src/" cannot appear in JSOM's. Diagnostics in the analysed .cpp
+# itself are always reported, so a clone of this repo under another directory
+# name still gets its own source findings — only header findings would be lost.
+HeaderFilterRegex: 'include/jt/.*\.hpp$|jsonTools/(src|tests)/.*\.cpp$'
+
+CheckOptions:
+  # src/paths.cpp catches JsonPointerException in three places on purpose:
+  # to_array_index() throws for an index beyond size_t, such an index is certainly
+  # out of range, and the code's own range check produces a better message than the
+  # exception would. Naming the type here keeps the check armed for every other
+  # empty catch, where swallowing an error is a real bug.
+  - key: bugprone-empty-catch.AllowEmptyCatchForExceptions
+    value: jsom::JsonPointerException

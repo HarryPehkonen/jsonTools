@@ -37,27 +37,43 @@ Reference: https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines
 
 ## Style
 
-- clang-format per the repo's `.clang-format` (run the repo's format target if
-  present). Match existing naming conventions.
+- clang-format per the repo's `.clang-format` (the same file as JSOM and
+  Computo: LLVM base, 4-space indent, 100 columns). Check with
+  `tools/ci.sh format`; apply with
+  `clang-format -i $(git ls-files 'include/jt/*.hpp' 'src/*.cpp' 'tests/*.cpp')`.
+- Match existing naming conventions.
 - Keep the naming/architecture conventions documented in this repo's
   CLAUDE.md / README.
 
 ## Definition of done (agent checklist)
 
-- [ ] Zero-warning build (see Tooling status — `-Werror` where wired)
+- [ ] Zero-warning build (see Tooling status — `-Werror` is wired on every
+      project target)
 - [ ] All tests pass
 - [ ] Tests pass under ASan+UBSan
-- [ ] clang-tidy — no NEW findings vs baseline (where tidy is configured)
+- [ ] clang-tidy — zero findings (`tools/ci.sh tidy`)
 - [ ] No raw owning pointers / `new` / `reinterpret_cast` introduced
 - [ ] Test written first (RED) for every behavior change or bug fix
+- [ ] `tools/ci.sh` green (the whole list above, plus the repo invariants)
 
-## Tooling status (this repo, as of 2026-09-08)
+## Tooling status (this repo, as of 2026-09-19)
 
-- Warnings: compile flags on `jt_core`/`jt*` targets (see CMakeLists.txt).
-  `-Werror` pending a verified zero-warning baseline.
-- Tests: build with `-DJT_BUILD_TESTS=ON`, run the produced test binary.
-- Sanitizers: `cmake -B build-asan -DJT_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS=
-  "-fsanitize=address,undefined -fno-omit-frame-pointer"` then build + run tests.
+- Warnings: `-Wall -Wextra -Wpedantic -Werror` on `jt_core`, every `jt*` tool
+  and `jt_tests`; verified zero-warning on a from-scratch build.
+- Formatting: `.clang-format` is committed and enforced (`tools/ci.sh format`).
+- Static analysis: `.clang-tidy` — value-only checks (`bugprone-*`,
+  `performance-*`), scoped to this repo's own files so the sibling JSOM's
+  headers are not reported as our findings. Enforced with zero findings
+  (`tools/ci.sh tidy`).
+- Tests: `cmake -S . -B build -DJT_BUILD_TESTS=ON -DJSOM_SOURCE_DIR=/path/to/JSOM`,
+  `cmake --build build -j`, `./build/jt_tests` — 216 tests.
+- Sanitizers: `tools/ci.sh asan` configures `build-asan` with
+  `-fsanitize=address,undefined -fno-omit-frame-pointer` and runs the same suite.
+- Everything above runs through one script, `tools/ci.sh`, called by hand and by
+  the hooks in `.githooks/` (see README, "Local CI"). It also gates the
+  repo-specific invariants that no general tool knows about: every file
+  committed or ignored, every tool wired into CMake/tests/README, one version
+  string, and a pristine build of `HEAD`.
 
 ## Upstream reference
 
