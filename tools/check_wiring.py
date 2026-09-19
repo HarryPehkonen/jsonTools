@@ -22,6 +22,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# A tool binary is "jt" + a capitalised verb: jtNew, jtSet, jtFilter. The CMake tool
+# lists hold the bare verbs (New, Set, ...); the tests' add_dependencies block holds
+# the binary names. Anything else that appears there — jt_tests, or a fuzz harness such
+# as fuzz_jt — is not a tool and must not be read as one.
+TOOL_TARGET = re.compile(r"^jt[A-Z][a-z]+$")
+
 
 def read(path: Path) -> str:
     try:
@@ -56,7 +62,15 @@ def main() -> int:
     install_list = {t.lower() for t in (lists[-1] if lists else [])}
 
     dep_block = re.search(r"add_dependencies\(jt_tests\s*(.*?)\)", tcmake, re.S)
-    deps = {t[2:].lower() for t in re.split(r"\s+", dep_block.group(1) if dep_block else "") if t.startswith("jt")}
+    # A tool target is "jt" + a capitalised verb (jtNew, jtSet). That block can also hold
+    # targets that are not tools — jt_tests itself, or a harness such as fuzz_jt — and
+    # reading one of those as a verb produced a nonsense gap
+    # ("src/jt__fuzz.cpp does not exist" for a target named jt_fuzz).
+    deps = {
+        t[2:].lower()
+        for t in re.split(r"\s+", dep_block.group(1) if dep_block else "")
+        if TOOL_TARGET.match(t)
+    }
 
     test_files = {m.group(1) for m in re.finditer(r"^\s+(test_\w+)\.cpp", tcmake, re.M)}
 
