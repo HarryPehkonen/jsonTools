@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
         jsom::JsonDocument doc = jt::read_stdin();
         if (positional.empty() || positional.size() == 1) {
             // Reduction: document becomes the values array.
-            doc = jt::values_array(std::move(doc), positional.empty() ? "/" : positional[0]);
+            doc = jt::values_array(doc, positional.empty() ? "/" : positional[0]);
         } else if (positional.size() == 2) {
             // Form B: write the values array to dest, document intact.
             doc = jt::values(std::move(doc), positional[0], positional[1], mkdir_p);

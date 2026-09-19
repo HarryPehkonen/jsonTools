@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
     return jt::run_cli([&] {
         jsom::JsonDocument doc = jt::read_stdin();
-        doc = jt::select(std::move(doc), paths);
+        doc = jt::select(doc, paths);
         jt::write_stdout(doc, globals.pretty);
     });
 }

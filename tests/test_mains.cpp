@@ -58,6 +58,7 @@ RunResult run_tool(const std::vector<std::string>& args, const std::string& inpu
         close(err_pipe[0]);
         close(err_pipe[1]);
         std::vector<char*> argv;
+        argv.reserve(args.size() + 1); // one per argument, plus the nullptr terminator
         for (const std::string& a : args)
             argv.push_back(const_cast<char*>(a.c_str()));
         argv.push_back(nullptr);

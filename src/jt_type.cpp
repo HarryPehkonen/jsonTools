@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
     return jt::run_cli([&] {
         jsom::JsonDocument doc = jt::read_stdin();
-        doc = jt::type(std::move(doc), positional.empty() ? "/" : positional[0]);
+        doc = jt::type(doc, positional.empty() ? "/" : positional[0]);
         jt::write_stdout(doc, globals.pretty);
     });
 }

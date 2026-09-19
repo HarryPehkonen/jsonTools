@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
 
     return jt::run_cli([&] {
         jsom::JsonDocument doc = jt::read_stdin();
-        doc = jt::zip(std::move(doc), positional[0], positional[1], overwrite);
+        doc = jt::zip(doc, positional[0], positional[1], overwrite);
         jt::write_stdout(doc, globals.pretty);
     });
 }

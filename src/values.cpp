@@ -6,7 +6,7 @@
 
 namespace jt {
 
-jsom::JsonDocument values_array(jsom::JsonDocument doc, const std::string& path) {
+jsom::JsonDocument values_array(const jsom::JsonDocument& doc, const std::string& path) {
     const std::string pointer = normalize_pointer(path);
     const jsom::JsonDocument& target = require_at(doc, pointer);
     if (!target.is_object()) {

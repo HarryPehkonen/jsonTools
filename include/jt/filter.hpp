@@ -2,13 +2,15 @@
 
 #include <jsom/jsom.hpp>
 
+#include <cstdint>
 #include <string>
 
 namespace jt {
 
 // The comparison a filter applies, mirroring the --eq/--ne/--gt/--ge/--lt/--le
-// CLI flags.
-enum class Op { Eq, Ne, Gt, Ge, Lt, Le };
+// CLI flags. One byte on purpose: six values, and this enum rides along on every
+// element the filter examines.
+enum class Op : std::uint8_t { Eq, Ne, Gt, Ge, Lt, Le };
 
 // Map a CLI flag ("--gt") onto an operator. Returns false for anything else.
 bool op_from_flag(const std::string& flag, Op& out);

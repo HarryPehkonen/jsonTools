@@ -5,7 +5,7 @@
 
 namespace jt {
 
-jsom::JsonDocument select(jsom::JsonDocument doc, const std::vector<std::string>& paths) {
+jsom::JsonDocument select(const jsom::JsonDocument& doc, const std::vector<std::string>& paths) {
     if (paths.empty()) {
         throw Error("<args>", "no paths to select",
                     "name at least one path, e.g. jtSelect /user/name");

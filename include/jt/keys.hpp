@@ -8,7 +8,9 @@ namespace jt {
 
 // Reduction form: the document becomes the array of key names of the object
 // at `path`. A missing path, or anything that is not an object, is an error.
-jsom::JsonDocument keys(jsom::JsonDocument doc, const std::string& path = "/");
+// Takes the document by const reference: it only reads it, and a JsonDocument
+// copy is the whole DOM.
+jsom::JsonDocument keys(const jsom::JsonDocument& doc, const std::string& path = "/");
 
 // Form B (composable): write the array of the object's KEYS at `obj_path` into
 // `dest_path`, leaving the document intact. The destination leaf is created; a

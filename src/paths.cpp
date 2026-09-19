@@ -124,6 +124,9 @@ const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc, const std::s
             try {
                 index = jsom::JsonPointer::to_array_index(segment);
             } catch (const jsom::JsonPointerException&) {
+                // Deliberately empty (bugprone-empty-catch): an index beyond size_t is
+                // certainly out of range, and the check below reports that better than
+                // the pointer exception would.
             }
             const std::size_t size = current->size();
             if (index >= size) {
@@ -173,6 +176,9 @@ void require_parent(const jsom::JsonDocument& doc, const std::string& pointer,
         try {
             index = jsom::JsonPointer::to_array_index(leaf);
         } catch (const jsom::JsonPointerException&) {
+            // Deliberately empty (bugprone-empty-catch): an index beyond size_t is
+            // certainly out of range; keep the size() default and let the range check
+            // below produce the hint.
         }
         const std::size_t size = container->size();
         if (index < size)
@@ -219,6 +225,9 @@ void create_object_path(jsom::JsonDocument& doc, const std::string& pointer) {
             try {
                 index = jsom::JsonPointer::to_array_index(segment);
             } catch (const jsom::JsonPointerException&) {
+                // Deliberately empty (bugprone-empty-catch): an index beyond size_t is
+                // certainly out of range, and the check below reports that better than
+                // the pointer exception would.
             }
             const std::size_t size = current->size();
             if (index >= size) {

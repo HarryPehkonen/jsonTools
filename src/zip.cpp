@@ -21,7 +21,7 @@ const jsom::JsonDocument& require_array(const jsom::JsonDocument& doc, const std
 
 } // namespace
 
-jsom::JsonDocument zip(jsom::JsonDocument doc, const std::string& keys_path,
+jsom::JsonDocument zip(const jsom::JsonDocument& doc, const std::string& keys_path,
                        const std::string& values_path, bool overwrite) {
     const std::string keys_pointer = normalize_pointer(keys_path);
     const std::string values_pointer = normalize_pointer(values_path);

@@ -2,12 +2,14 @@
 
 #include <jsom/jsom.hpp>
 
+#include <cstdint>
 #include <string>
 
 namespace jt {
 
-// What jtMove/jtCopy are allowed to do at the destination.
-enum class DestMode {
+// What jtMove/jtCopy are allowed to do at the destination. One byte on purpose:
+// three modes, and it rides along on every jtCopy/jtMove call.
+enum class DestMode : std::uint8_t {
     Overwrite, // default: always write
     IfNotSet,  // --if-not-set: write only when <to> is absent
     Replace,   // --replace: write only when <to> already exists

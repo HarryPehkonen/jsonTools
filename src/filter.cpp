@@ -85,9 +85,11 @@ jsom::JsonDocument filter(jsom::JsonDocument doc, const std::string& list_path,
             continue;
 
         if (is_ordering(op) && found->type() != value.type()) {
-            throw Error(pointer + "/" + std::to_string(i) + key_pointer,
-                        "cannot order a " + type_name(*found) + " against a " + type_name(value),
-                        "jsonTools never coerces types; compare like with like");
+            std::string where = pointer;
+            where.append("/").append(std::to_string(i)).append(key_pointer);
+            std::string problem = "cannot order a ";
+            problem.append(type_name(*found)).append(" against a ").append(type_name(value));
+            throw Error(where, problem, "jsonTools never coerces types; compare like with like");
         }
         if (apply(op, *found, value))
             kept.push_back(elements[i]);

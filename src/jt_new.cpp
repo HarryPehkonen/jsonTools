@@ -29,8 +29,12 @@ int main(int argc, char* argv[]) {
 
     // jtNew reads no stdin. A literal parses as-is (`jtNew '[]'` -> array);
     // no literal defaults to an empty object.
-    jsom::JsonDocument doc = literal ? jt::parse_literal(literal) : jsom::parse_document("{}");
-
-    jt::write_stdout(doc, pretty);
-    return 0;
+    //
+    // Wrapped in jt::run_cli like every other main: parsing can throw, and this was
+    // the one tool where an exception escaped main() instead of being rendered as
+    // the standard one-line error (bugprone-exception-escape).
+    return jt::run_cli([&] {
+        jsom::JsonDocument doc = literal ? jt::parse_literal(literal) : jsom::parse_document("{}");
+        jt::write_stdout(doc, pretty);
+    });
 }

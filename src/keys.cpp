@@ -6,7 +6,7 @@
 
 namespace jt {
 
-jsom::JsonDocument keys(jsom::JsonDocument doc, const std::string& path) {
+jsom::JsonDocument keys(const jsom::JsonDocument& doc, const std::string& path) {
     const std::string pointer = normalize_pointer(path);
     const jsom::JsonDocument& target = require_at(doc, pointer);
     if (!target.is_object()) {
@@ -31,7 +31,7 @@ jsom::JsonDocument keys_to(jsom::JsonDocument doc, const std::string& obj_path,
                     "name a field to write them to, e.g. jtKeys /obj /keys");
     }
 
-    jsom::JsonDocument named = keys(jsom::JsonDocument(doc), pointer);
+    jsom::JsonDocument named = keys(doc, pointer);
     return set(std::move(doc), dest, named, mkdir_p);
 }
 
