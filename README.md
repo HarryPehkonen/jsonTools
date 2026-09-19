@@ -56,7 +56,8 @@ tools/ci.sh --list                    # what the stages are
 | `tests` | `./build/jt_tests` — 216 tests |
 | `cli` | the README examples and the error contract, end to end through the real binaries |
 | `asan` | the same suite under ASan + UBSan |
-| `tidy` | clang-tidy over `src/` and `tests/`, zero findings |
+| `fuzz` | `build-fuzz/` (clang, coverage + ASan/UBSan) and `CI_FUZZ_SECONDS` (default 60) of libFuzzer over the pointer/argv parsing surface |
+| `tidy` | clang-tidy over `src/`, `tests/` and `fuzz/`, zero findings |
 | `wire` | every tool is built, installed, depended on by the tests, exercised, and documented — the guard for the next tool you add |
 | `version` | `include/jt/version.hpp` == CMake `VERSION` == what every binary prints for `--version` |
 | `pristine` | `git archive HEAD` configures, builds and tests in a temp dir: the **committed** tree is complete |
@@ -77,6 +78,31 @@ The one that matters most is `CI_JSOM_DIR`, the JSOM checkout to build against:
 
 Per-stage output is kept in `.ci-logs/` (gitignored); on failure the tail is
 printed and the path named.
+
+### Fuzzing
+
+JSOM fuzzes JSON text; jsonTools fuzzes what jsonTools owns — RFC 6901 pointer
+strings, the traversal that turns one into a document position
+(`require_at`/`require_parent`/`create_object_path`), the write verbs built on it
+(`set` with and without `-p`, `copy`/`move` in all three `DestMode`s, `remove`)
+and the argv helpers every tool shares. The harness is `fuzz/jt_fuzz.cpp`, its
+corpus is `fuzz/seeds/` plus a dictionary of pointer tokens (`fuzz/jt.dict`).
+
+```bash
+cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++ -DJT_BUILD_FUZZING=ON \
+      -DJSOM_SOURCE_DIR=/path/to/JSOM
+cmake --build build-fuzz --target build_fuzzer
+./build-fuzz/fuzz_jt build-fuzz/corpus fuzz/seeds \
+      -dict=fuzz/jt.dict -artifact_prefix=build-fuzz/corpus/ -max_total_time=60
+
+# replay a finding (the artifact you get from a failing fuzz stage)
+./build-fuzz/fuzz_jt build-fuzz/corpus/crash-<hash>
+```
+
+The gate runs 60 seconds of that on every push (`tools/ci.sh fuzz`); the long
+campaign is the nightly cron (`~/hermes-workspace/cron/fuzz_overnight.sh`), whose
+findings are reported by the `fuzz-report` job. A crash found there becomes a
+regression test in `tests/` — the same rule as any other bug fix.
 
 ## Install
 

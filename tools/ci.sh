@@ -28,10 +28,12 @@ cd "$REPO_ROOT" || exit 1
 CI_JOBS=${CI_JOBS:-$(nproc 2>/dev/null || echo 4)}
 CI_BUILD_DIR=${CI_BUILD_DIR:-build}
 CI_ASAN_BUILD_DIR=${CI_ASAN_BUILD_DIR:-build-asan}
+CI_FUZZ_BUILD_DIR=${CI_FUZZ_BUILD_DIR:-build-fuzz}
+CI_FUZZ_SECONDS=${CI_FUZZ_SECONDS:-60}         # libFuzzer smoke budget; the nightly cron owns the long campaign
 CI_LOG_DIR=${CI_LOG_DIR:-.ci-logs}
 CI_STRICT_TOOLS=${CI_STRICT_TOOLS:-0}          # 1 = a missing tool fails instead of SKIPping
 CI_KEEP_TMP=${CI_KEEP_TMP:-0}                  # 1 = keep the pristine-checkout temp dir
-CI_DEFAULT_STAGES=${CI_DEFAULT_STAGES:-"tree format build tests cli asan tidy wire version pristine"}
+CI_DEFAULT_STAGES=${CI_DEFAULT_STAGES:-"tree format build tests cli asan fuzz tidy wire version pristine"}
 CI_TIDY_BASELINE=${CI_TIDY_BASELINE:-.ci/tidy-baseline.txt}
 CI_JSOM_DIR=${CI_JSOM_DIR:-}                   # empty = let CMake FetchContent JSOM
 
@@ -69,7 +71,9 @@ Stages:
   tests       ./<build>/jt_tests
   cli         the jt* binaries end to end: the README examples, and the error contract
   asan        build-asan (ASan+UBSan) + the same test suite under the sanitizers
-  tidy        clang-tidy over src/ and tests/ (repo .clang-tidy); zero findings
+  fuzz        the libFuzzer harness over the pointer/argv surface, for
+              CI_FUZZ_SECONDS (default 60) — long campaigns are the nightly cron's
+  tidy        clang-tidy over src/, tests/ and fuzz/ (repo .clang-tidy); zero findings
   wire        every tool is built, installed, depended on by the tests, exercised and
               documented — the guard for the next tool you add
   version     one version string: include/jt/version.hpp == CMake project VERSION ==
@@ -159,16 +163,21 @@ require_tool() {
 # The file set the format gate owns. --others --exclude-standard includes new files that
 # are not committed yet: while working, a new source file is not in `git ls-files`, and a
 # gate that cannot see it lets it through unformatted until after it is committed.
+# fuzz/ is here for the same reason it is in ci_tidy_sources(): a source no gate reads is
+# a source the gate does not own.
 ci_sources() {
     git ls-files --cached --others --exclude-standard -- \
-        'include/jt/*.hpp' 'src/*.cpp' 'tests/*.cpp' | sort -u
+        'include/jt/*.hpp' 'src/*.cpp' 'tests/*.cpp' 'fuzz/*.cpp' | sort -u
 }
 
 # clang-tidy needs an entry in compile_commands.json per translation unit, so headers are
 # not passed here: diagnostics inside include/jt/ still surface through the sources that
 # include them (that is what .clang-tidy's HeaderFilterRegex is for).
+# fuzz/*.cpp is compile-database covered by CMakeLists.txt's jt_fuzz_harness object
+# library — the harness is clang-only as an EXECUTABLE, but the default build still
+# compiles it, which is what puts it in build/compile_commands.json.
 ci_tidy_sources() {
-    git ls-files --cached --others --exclude-standard -- 'src/*.cpp' 'tests/*.cpp' | sort -u
+    git ls-files --cached --others --exclude-standard -- 'src/*.cpp' 'tests/*.cpp' 'fuzz/*.cpp' | sort -u
 }
 
 cmake_flag_jsom() {
@@ -185,7 +194,7 @@ stage_tree() {
     # The gate creates these; a .gitignore that does not cover them would make the next
     # run fail the moment it writes a log. Create them first: git check-ignore cannot
     # match a directory pattern (build-*/) against a path that does not exist yet.
-    mkdir -p "$CI_BUILD_DIR" "$CI_ASAN_BUILD_DIR" "$CI_LOG_DIR"
+    mkdir -p "$CI_BUILD_DIR" "$CI_ASAN_BUILD_DIR" "$CI_FUZZ_BUILD_DIR" "$CI_LOG_DIR"
 
     local untracked
     untracked=$(git ls-files --others --exclude-standard)
@@ -222,7 +231,7 @@ stage_tree() {
     fi
 
     local path missing=0
-    for path in "$CI_BUILD_DIR" "$CI_ASAN_BUILD_DIR" "$CI_LOG_DIR" ".ci.env"; do
+    for path in "$CI_BUILD_DIR" "$CI_ASAN_BUILD_DIR" "$CI_FUZZ_BUILD_DIR" "$CI_LOG_DIR" ".ci.env"; do
         if ! git check-ignore -q "$path" 2>/dev/null; then
             printf '    NOT ignored: %s\n' "$path"
             missing=$((missing + 1))
@@ -307,6 +316,52 @@ stage_asan() {
     fi
     tail -n 1 "$CI_LOG_DIR/asan-tests.log" | sed 's/^/      /'
     ci_pass asan
+}
+
+stage_fuzz() {
+    ci_begin "fuzz (libFuzzer smoke, ${CI_FUZZ_SECONDS}s)"
+    require_tool clang++ fuzz || return 0
+    # The harness is clang-only (libFuzzer IS clang's runtime) and gets its own build
+    # directory: JT_BUILD_FUZZING=ON instruments every target there — coverage plus
+    # ASan/UBSan — while only the harness links libFuzzer's main(), so the jt* tools in
+    # that directory still build and link normally.
+    # shellcheck disable=SC2046
+    cmake -S . -B "$CI_FUZZ_BUILD_DIR" -DCMAKE_CXX_COMPILER=clang++ -DJT_BUILD_FUZZING=ON \
+        $(cmake_flag_jsom) > "$CI_LOG_DIR/fuzz-configure.log" 2>&1 \
+        || ci_fail fuzz "cmake configure failed (the fuzz target needs clang++)" "$CI_LOG_DIR/fuzz-configure.log"
+    cmake --build "$CI_FUZZ_BUILD_DIR" --target build_fuzzer -j "$CI_JOBS" \
+        > "$CI_LOG_DIR/fuzz-build.log" 2>&1 \
+        || ci_fail fuzz "the fuzz target did not build" "$CI_LOG_DIR/fuzz-build.log"
+
+    # Two libFuzzer facts, both verified by hitting them: it refuses to start when the
+    # corpus directory does not exist (a fresh clone has none), and without
+    # -artifact_prefix the crash artifact is written to the current directory, where the
+    # failure report will never look for it. The corpus persists between runs, so it
+    # accumulates coverage over this checkout's life.
+    local corpus="$CI_FUZZ_BUILD_DIR/corpus"
+    mkdir -p "$corpus"
+    if ! UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 ASAN_OPTIONS=detect_leaks=1 \
+        "$CI_FUZZ_BUILD_DIR/fuzz_jt" "$corpus" "$REPO_ROOT/fuzz/seeds" \
+        -dict="$REPO_ROOT/fuzz/jt.dict" -artifact_prefix="$corpus/" \
+        -max_total_time="$CI_FUZZ_SECONDS" -print_final_stats=1 \
+        > "$CI_LOG_DIR/fuzz.log" 2>&1; then
+        grep -m1 'Test unit written to' "$CI_LOG_DIR/fuzz.log" | sed 's/^/      reproducer: /'
+        printf '      replay it with: %s/fuzz_jt <artifact>\n' "$CI_FUZZ_BUILD_DIR"
+        ci_fail fuzz "libFuzzer reported a finding (crash, leak or UB) within ${CI_FUZZ_SECONDS}s" "$CI_LOG_DIR/fuzz.log"
+    fi
+    # Belt and braces: a sanitizer report that never reaches the exit status would make
+    # this stage green on a real finding — measured 2026-09-19, a forked child's ASan
+    # error exits 1, exactly like an expected rejection. The harness runs everything
+    # in-process, so any report in this log is a finding.
+    if grep -qE 'ERROR: (libFuzzer|AddressSanitizer|UndefinedBehaviorSanitizer)|SUMMARY: (AddressSanitizer|UndefinedBehaviorSanitizer)' \
+        "$CI_LOG_DIR/fuzz.log"; then
+        ci_fail fuzz "the fuzz log carries a sanitizer/libFuzzer report even though the run exited 0" "$CI_LOG_DIR/fuzz.log"
+    fi
+    # The last DONE line carries coverage/features/corpus size and the input rate; the
+    # "Done N runs" line carries the input count. Together they say whether the smoke
+    # actually explored anything, which a bare exit status cannot.
+    grep -E 'DONE|^Done [0-9]+ runs' "$CI_LOG_DIR/fuzz.log" | tail -2 | sed 's/^/      /'
+    ci_pass fuzz
 }
 
 stage_tidy() {

@@ -12,3 +12,15 @@ build-*/
 # Compiled artifacts
 *.o
 *.a
+
+# Fuzzing (tools/ci.sh's fuzz stage). The harness binary and the corpus the gate
+# accumulates live in build-fuzz/ (covered by build-*/ above), and the gate passes
+# -artifact_prefix into that directory's corpus. A hand-run fuzzer, though, writes
+# its corpus and its crash-*/leak-*/oom-*/timeout-* artifacts into the CURRENT
+# directory — and an untracked, unignored file fails the tree stage.
+fuzz_jt
+corpus/
+crash-*
+leak-*
+oom-*
+timeout-*

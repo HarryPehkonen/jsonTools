@@ -15,7 +15,7 @@ Checks: '-*,bugprone-*,-bugprone-easily-swappable-parameters,performance-*'
 # "jsonTools/src/" cannot appear in JSOM's. Diagnostics in the analysed .cpp
 # itself are always reported, so a clone of this repo under another directory
 # name still gets its own source findings — only header findings would be lost.
-HeaderFilterRegex: 'include/jt/.*\.hpp$|jsonTools/(src|tests)/.*\.cpp$'
+HeaderFilterRegex: 'include/jt/.*\.hpp$|jsonTools/(src|tests|fuzz)/.*\.cpp$'
 
 CheckOptions:
   # src/paths.cpp catches JsonPointerException in three places on purpose:
