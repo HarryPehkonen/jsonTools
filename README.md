@@ -51,7 +51,7 @@ tools/ci.sh --list                    # what the stages are
 | stage | what it proves |
 | --- | --- |
 | `tree` | every file is committed or ignored (untracked **and** unignored fails), `.gitignore` still covers what the gate itself creates, no tracked file is ignored |
-| `format` | every source matches the repo `.clang-format` |
+| `format` | the C++ files **this branch touched** match the repo `.clang-format` (a whole-tree check drowns in drift nobody edited, and gets muted) |
 | `build` | CMake configure + build with zero warnings (`-Werror`) |
 | `tests` | `./build/jt_tests` — 216 tests |
 | `cli` | the README examples and the error contract, end to end through the real binaries |
@@ -67,6 +67,11 @@ commit stays cheap); `.githooks/pre-push` runs everything with `--require-clean`
 Deliberate bypass is `git commit --no-verify` / `git push --no-verify`. Enabling
 the hooks is per clone, not per repo — a fresh clone has no gate until that one
 `git config` line runs.
+
+Every run ends with one unambiguous line — `GATE PASSED` or `GATE FAILED` — and a
+non-zero exit when it failed. A failure also names every requested stage that never
+ran, as `BLOCK <stage> (did not run: the run stopped at <stage>)`, because a stage
+that did not run must never read as one that passed.
 
 Machine-local settings live in `.ci.env` (gitignored; copy `.ci.env.example`).
 The one that matters most is `CI_JSOM_DIR`, the JSOM checkout to build against:

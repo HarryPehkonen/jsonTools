@@ -1,14 +1,30 @@
 #!/usr/bin/env bash
 #
-# pre-push: the FULL gate, on the tree you are about to publish.
+# pre-push: the FULL tier — the gate, on the tree you are about to publish.
 #
-# Requires a clean worktree (nothing uncommitted), then runs every stage — ending with a
-# pristine checkout of HEAD built from scratch, which is the check that catches "it works
-# on my machine because of a file I never committed, or one .gitignore swallowed".
+# from AI-DEV-STARTER (plunk-in kit), templates/hooks/pre-push. Deviation: no stage list
+# here, because the default set inside tools/ci.sh is the single definition of the gate and
+# a list in this file would be a second copy of it (the kit's C++ template pins one; this
+# repo's default set carries the project-shaped stages cli/fuzz/wire as well).
 #
-# No stage list here on purpose: the default set inside tools/ci.sh is the single
-# definition of the gate, so this hook cannot drift from what `tools/ci.sh` runs by hand.
+# Install as .githooks/pre-push and arm it once per clone:
 #
-# Deliberate bypass: git push --no-verify
+#     git config core.hooksPath .githooks
 #
-exec "$(git rev-parse --show-toplevel)/tools/ci.sh" --require-clean
+# Requires a clean worktree, and ends with a pristine checkout of HEAD built from scratch —
+# the check that catches "it works on my machine because of a file I never committed".
+#
+# Deliberate bypass when you need one:  git push --no-verify
+#
+set -uo pipefail
+
+root=$(git rev-parse --show-toplevel) || exit 1
+
+if [ -x "$root/tools/ci.sh" ]; then
+    exec "$root/tools/ci.sh" --require-clean
+fi
+
+# No gate found is a failure, not a warning: a silently unarmed gate is worse than no
+# gate, because it looks armed.
+printf 'pre-push: no gate found. Expected %s/tools/ci.sh (C++).\n' "$root" >&2
+exit 1

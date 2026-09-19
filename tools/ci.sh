@@ -2,6 +2,15 @@
 #
 # jsonTools local CI — the gates from CODING_STANDARDS.md, in one script.
 #
+# from AI-DEV-STARTER (plunk-in kit), templates/cpp/ci.sh. This copy deviates on purpose;
+# the differences are listed here so nobody has to diff it against the kit:
+#   - stages added: cli, fuzz, wire (project-shaped; the kit's template omits them)
+#   - stages dropped: tsan (no threads here yet), std, conform
+#   - `version` IS the kit's artifact-identity check, in its three-copy C++ form:
+#     include/jt/version.hpp == CMake project VERSION == what every jt* binary prints
+#   - CI_JSOM_DIR defaults to the sibling ../JSOM checkout, so the gate stays offline
+#   - CI_TEST_CMD is unused: there is one gtest binary, ./$CI_BUILD_DIR/jt_tests
+#
 # No GitHub, no network, no framework: this is what the git hooks in .githooks/ run,
 # and you can run it by hand at any time (it is non-destructive — nothing is
 # committed, staged, reverted or reformatted for you).
@@ -17,12 +26,19 @@
 # here, so the repo works with no config at all. See .ci.env.example.
 #
 # Exit status: 0 only if every stage that ran passed. A failing stage stops the run,
-# prints why, and leaves its full output in .ci-logs/<stage>.log.
+# prints why, and leaves its full output in .ci-logs/<stage>.log. The last line of a run
+# is always GATE PASSED or GATE FAILED, and a failure names every requested stage that
+# never ran (BLOCK <stage>), so a stage that did not run is never read as one that passed.
 
 set -uo pipefail
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$REPO_ROOT" || exit 1
+
+# No colour from the tools: this script greps their output (warning:, error:, DONE, tests
+# from) and ANSI escapes defeat the greps. The escapes this script prints itself are for
+# the human reading the terminal.
+export NO_COLOR=1
 
 # ---------------------------------------------------------------- defaults + config
 CI_JOBS=${CI_JOBS:-$(nproc 2>/dev/null || echo 4)}
@@ -57,16 +73,18 @@ STAGES_REQUESTED=()
 # ---------------------------------------------------------------- plumbing
 RESULT_LINES=()
 FAILED_STAGE=""
+RAN_STAGES=()
 RUN_TMP_DIRS=()
 
 usage() {
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'
     cat <<'EOF'
 
 Stages:
   tree        every file is committed or ignored (untracked+unignored fails), plus a
               .gitignore audit; --require-clean also fails on uncommitted changes
-  format      clang-format drift — dry run against the repo .clang-format
+  format      clang-format drift in the files this branch touches — dry run against the
+              repo .clang-format
   build       cmake configure + build (tests on, compile database on), zero warnings
   tests       ./<build>/jt_tests
   cli         the jt* binaries end to end: the README examples, and the error contract
@@ -116,6 +134,7 @@ ci_fail() {
     fi
     FAILED_STAGE="$name"
     summary
+    printf '\nGATE FAILED\n' >&2
     exit 1
 }
 
@@ -128,6 +147,20 @@ summary() {
     for line in "${RESULT_LINES[@]}"; do printf '  %s\n' "$line"; done
     if [ -n "$FAILED_STAGE" ]; then
         printf '  stopped at: %s\n' "$FAILED_STAGE"
+        # A stage that never ran because an earlier one failed must not read as a stage
+        # that passed. Once the build fails, the stages behind it have nothing trustworthy
+        # to say, so they are named as blocked rather than silently omitted.
+        local s r ran
+        for s in "${STAGES_REQUESTED[@]:-}"; do
+            [ -n "$s" ] || continue
+            ran=0
+            for r in "${RAN_STAGES[@]:-}"; do
+                [ "$r" = "$s" ] && ran=1
+            done
+            if [ "$ran" = "0" ] && [ "$s" != "$FAILED_STAGE" ]; then
+                printf '  BLOCK %s (did not run: the run stopped at %s)\n' "$s" "$FAILED_STAGE"
+            fi
+        done
     fi
 }
 
@@ -158,16 +191,6 @@ require_tool() {
     fi
     ci_skip "$stage" "$tool not installed — gate not exercised on this machine"
     return 1
-}
-
-# The file set the format gate owns. --others --exclude-standard includes new files that
-# are not committed yet: while working, a new source file is not in `git ls-files`, and a
-# gate that cannot see it lets it through unformatted until after it is committed.
-# fuzz/ is here for the same reason it is in ci_tidy_sources(): a source no gate reads is
-# a source the gate does not own.
-ci_sources() {
-    git ls-files --cached --others --exclude-standard -- \
-        'include/jt/*.hpp' 'src/*.cpp' 'tests/*.cpp' 'fuzz/*.cpp' | sort -u
 }
 
 # clang-tidy needs an entry in compile_commands.json per translation unit, so headers are
@@ -244,21 +267,50 @@ stage_tree() {
     ci_pass tree
 }
 
+# The files the branch touched, from three sources — the branch diff, the uncommitted
+# diff, and the untracked set (a brand-new file is invisible to `git diff` until it is
+# staged). A checkout level with origin/main has no diff at all, so the caller falls back
+# to the last commit and says so.
+touched_files() {
+    local base
+    base="$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)"
+    {
+        git diff --name-only --diff-filter=ACMR "$base" HEAD
+        git diff --name-only --diff-filter=ACMR HEAD
+        git ls-files --others --exclude-standard
+    } | sort -u
+}
+
 stage_format() {
-    ci_begin "format (clang-format --dry-run)"
+    ci_begin "format (clang-format --dry-run — the files this branch touches)"
     require_tool clang-format format || return 0
-    local -a sources
-    mapfile -t sources < <(ci_sources)
+    # Only the branch's own files, never the whole tree: every real repo carries
+    # pre-existing drift nobody edited, and a check that fails on other people's files is
+    # muted within a week. When you want the whole tree anyway (after a formatter bump):
+    #   clang-format --dry-run -Werror $(git ls-files 'include/jt/*.hpp' 'src/*.cpp' 'tests/*.cpp' 'fuzz/*.cpp')
+    local touched
+    touched="$(touched_files)"
+    if [ -z "$touched" ]; then
+        touched="$(git show --name-only --pretty=format: HEAD | sed '/^$/d')"
+        printf '    (level with origin/main: checking the last commit instead)\n'
+    fi
+    local -a sources=()
+    local f
+    while IFS= read -r f; do
+        [ -n "$f" ] && [ -f "$f" ] && sources+=("$f")
+    done < <(printf '%s\n' "$touched" | grep -E '\.(cpp|hpp)$')
     if [ "${#sources[@]}" -eq 0 ]; then
-        ci_fail format "no sources matched — the format gate would check nothing"
+        printf '    nothing to check: this branch touches no C++ file\n'
+        ci_pass format
+        return 0
     fi
     if clang-format --dry-run -Werror "${sources[@]}" > "$CI_LOG_DIR/format.log" 2>&1; then
-        printf '    %s files conform to .clang-format\n' "${#sources[@]}"
+        printf '    %s touched file(s) conform to .clang-format\n' "${#sources[@]}"
         ci_pass format
         return 0
     fi
     grep -oE '^[^:]+\.(cpp|hpp)' "$CI_LOG_DIR/format.log" | sort -u | sed 's/^/      /'
-    ci_fail format "clang-format drift (fix with: clang-format -i \$(git ls-files 'include/jt/*.hpp' 'src/*.cpp' 'tests/*.cpp'))" "$CI_LOG_DIR/format.log"
+    ci_fail format "clang-format drift in the files listed above (fix: clang-format -i <those files>)" "$CI_LOG_DIR/format.log"
 }
 
 stage_build() {
@@ -556,7 +608,8 @@ for stage in "${STAGES_REQUESTED[@]}"; do
         exit 2
     fi
     "stage_$stage"
+    RAN_STAGES+=("$stage")
 done
 ELAPSED=$(( $(date +%s) - START ))
 summary
-printf '\nall %s stage(s) passed in %ss\n' "${#STAGES_REQUESTED[@]}" "$ELAPSED"
+printf '\nall %s stage(s) passed in %ss\nGATE PASSED\n' "${#STAGES_REQUESTED[@]}" "$ELAPSED"
