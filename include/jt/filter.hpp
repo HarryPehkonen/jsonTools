@@ -18,7 +18,6 @@ bool op_from_flag(const std::string& flag, Op& out);
 // `op` against `value`. An element missing the key is dropped silently; an
 // ordering comparison across two different types is an error.
 jsom::JsonDocument filter(jsom::JsonDocument doc, const std::string& list_path,
-                          const std::string& key_path, Op op,
-                          const jsom::JsonDocument& value);
+                          const std::string& key_path, Op op, const jsom::JsonDocument& value);
 
 } // namespace jt

@@ -10,8 +10,8 @@ namespace jt {
 // One sort key: an element-relative path ("name", "name/last") and its
 // direction. `--desc-for <key>` on the CLI sets `descending` for that key only.
 struct SortKey {
-  std::string key;
-  bool descending = false;
+    std::string key;
+    bool descending = false;
 };
 
 // Sort the list at `list_path` (default "/", the whole document — bare

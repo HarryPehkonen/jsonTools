@@ -22,8 +22,7 @@ std::string display_pointer(const std::string& pointer);
 // and why it failed: "path not found" (missing object key, with a typo hint),
 // "'k' is not an array index" / "index N is out of range" (array addressing),
 // or "cannot look up 'k' inside a <type>" (tunneling through a scalar).
-const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc,
-                                     const std::string& pointer);
+const jsom::JsonDocument& require_at(const jsom::JsonDocument& doc, const std::string& pointer);
 
 // "did you mean /user/name?" for a pointer that failed to resolve; "" when no
 // existing key is a plausible typo of the failing segment.

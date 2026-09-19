@@ -1,0 +1,32 @@
+# jsonTools house style — byte-for-byte the same file as JSOM's and Computo's
+# (LLVM base, 4-space indent, 100 columns). One style across the suite means code
+# reads the same wherever it is moved between the repos.
+#
+# Verified 2026-09-19: formatting every jsonTools source with this file produces
+# output identical to formatting it with JSOM's .clang-format.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# --- Core Indentation and Bracing ---
+IndentWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+BraceWrapping:
+  AfterFunction:   true
+ContinuationIndentWidth: 4
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: Never
+PointerAlignment: Left
+
+# --- Line Breaking and Wrapping ---
+ColumnLimit: 100
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBinaryOperators: All
+BreakBeforeTernaryOperators: true
+AlignOperands: Align
+AllowShortFunctionsOnASingleLine: All
+
+# --- Other Important Deviations ---
+SpaceBeforeParens: ControlStatements
