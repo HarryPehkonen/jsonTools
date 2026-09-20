@@ -10,6 +10,11 @@
 #     include/jt/version.hpp == CMake project VERSION == what every jt* binary prints
 #   - CI_JSOM_DIR defaults to the sibling ../JSOM checkout, so the gate stays offline
 #   - CI_TEST_CMD is unused: there is one gtest binary, ./$CI_BUILD_DIR/jt_tests
+#   - CI_BUILD_TYPE defaults to Release and is passed to EVERY configure call below: this
+#     tree used to get Release by FORCE from JSOM's CMakeLists (JSOM enters as a
+#     subdirectory and wrote the cache), which reconfigured this consumer by accident.
+#     JSOM guards its defaults to its own top-level builds now (kanban t_772eabd9), so the
+#     configuration this gate builds is chosen here instead of inherited.
 #
 # No GitHub, no network, no framework: this is what the git hooks in .githooks/ run,
 # and you can run it by hand at any time (it is non-destructive — nothing is
@@ -53,6 +58,15 @@ CI_KEEP_TMP=${CI_KEEP_TMP:-0}                  # 1 = keep the pristine-checkout 
 CI_DEFAULT_STAGES=${CI_DEFAULT_STAGES:-"tree format kitprobes build tests cli asan fuzz tidy wire version pristine"}
 CI_TIDY_BASELINE=${CI_TIDY_BASELINE:-.ci/tidy-baseline.txt}
 CI_JSOM_DIR=${CI_JSOM_DIR:-}                   # empty = let CMake FetchContent JSOM
+
+# Build type for every configure call in this gate (build, asan, fuzz, tidy, pristine).
+# Release is deliberate — the fuzz and asan stages want the optimized code path, and
+# CMakeLists.txt adds -g to the code under test — and it is stated EXPLICITLY because it
+# used to be inherited: JSOM's CMakeLists wrote CMAKE_BUILD_TYPE=Release into the cache with
+# FORCE while entering as a subdirectory, so this repo was Release by accident of its
+# dependency. JSOM no longer does that (kanban t_772eabd9), so without this line the tree
+# would silently drop to CMake's -O0.
+CI_BUILD_TYPE=${CI_BUILD_TYPE:-Release}
 
 if [ -f .ci.env ]; then
     # shellcheck disable=SC1091
@@ -353,6 +367,7 @@ stage_build() {
     ci_begin "build (-Werror, zero warnings)"
     # shellcheck disable=SC2046
     cmake -S . -B "$CI_BUILD_DIR" -DJT_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        -DCMAKE_BUILD_TYPE="$CI_BUILD_TYPE" \
         $(cmake_flag_jsom) > "$CI_LOG_DIR/configure.log" 2>&1 \
         || ci_fail build "cmake configure failed" "$CI_LOG_DIR/configure.log"
     cmake --build "$CI_BUILD_DIR" -j "$CI_JOBS" > "$CI_LOG_DIR/build.log" 2>&1 \
@@ -394,6 +409,7 @@ stage_asan() {
     # shellcheck disable=SC2046
     cmake -S . -B "$CI_ASAN_BUILD_DIR" -DJT_BUILD_TESTS=ON \
         -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+        -DCMAKE_BUILD_TYPE="$CI_BUILD_TYPE" \
         $(cmake_flag_jsom) > "$CI_LOG_DIR/asan-configure.log" 2>&1 \
         || ci_fail asan "cmake configure failed" "$CI_LOG_DIR/asan-configure.log"
     cmake --build "$CI_ASAN_BUILD_DIR" -j "$CI_JOBS" > "$CI_LOG_DIR/asan-build.log" 2>&1 \
@@ -415,6 +431,7 @@ stage_fuzz() {
     # that directory still build and link normally.
     # shellcheck disable=SC2046
     cmake -S . -B "$CI_FUZZ_BUILD_DIR" -DCMAKE_CXX_COMPILER=clang++ -DJT_BUILD_FUZZING=ON \
+        -DCMAKE_BUILD_TYPE="$CI_BUILD_TYPE" \
         $(cmake_flag_jsom) > "$CI_LOG_DIR/fuzz-configure.log" 2>&1 \
         || ci_fail fuzz "cmake configure failed (the fuzz target needs clang++)" "$CI_LOG_DIR/fuzz-configure.log"
     cmake --build "$CI_FUZZ_BUILD_DIR" --target build_fuzzer -j "$CI_JOBS" \
@@ -458,6 +475,7 @@ stage_tidy() {
     if [ ! -f "$CI_BUILD_DIR/compile_commands.json" ]; then
         # shellcheck disable=SC2046
         cmake -S . -B "$CI_BUILD_DIR" -DJT_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_BUILD_TYPE="$CI_BUILD_TYPE" \
             $(cmake_flag_jsom) > "$CI_LOG_DIR/tidy-configure.log" 2>&1 \
             || ci_fail tidy "cmake configure failed (tidy needs compile_commands.json)" "$CI_LOG_DIR/tidy-configure.log"
     fi
@@ -465,10 +483,13 @@ stage_tidy() {
     mapfile -t sources < <(ci_tidy_sources)
 
     # A compile database that exists is not a compile database that covers this repo:
-    # CMake writes one per directory that enables it, and the JSOM subdirectory enables
-    # it for itself — so build/compile_commands.json can hold JSOM's few translation
-    # units and none of ours. clang-tidy then analyses nothing, cannot find a single
-    # header, and still prints "findings". Prove coverage before believing the result.
+    # CMake writes one per directory that enables it, and until the guard landed (kanban
+    # t_772eabd9) JSOM's subdirectory enabled it for itself — so build/compile_commands.json
+    # could hold JSOM's few translation units and none of ours. clang-tidy then analyses
+    # nothing, cannot find a single header, and still prints "findings". This gate passes
+    # -DCMAKE_EXPORT_COMPILE_COMMANDS=ON to the top level, which is what puts BOTH sets in
+    # the file (a subdirectory inherits the consumer's directory scope). Prove coverage
+    # before believing the result.
     local covered=0 uncovered=0 src
     for src in "${sources[@]}"; do
         if grep -qF "\"$REPO_ROOT/$src\"" "$CI_BUILD_DIR/compile_commands.json"; then
@@ -606,8 +627,8 @@ stage_pristine() {
         printf '    JSOM will be fetched from GitHub — no CI_JSOM_DIR, so this run is not hermetic\n'
     fi
 
-    cmake -S "$tmp" -B "$tmp/build" -DJT_BUILD_TESTS=ON "$(cmake_flag_jsom)" \
-        > "$CI_LOG_DIR/pristine-configure.log" 2>&1 \
+    cmake -S "$tmp" -B "$tmp/build" -DJT_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE="$CI_BUILD_TYPE" \
+        "$(cmake_flag_jsom)" > "$CI_LOG_DIR/pristine-configure.log" 2>&1 \
         || ci_fail pristine "a fresh checkout of HEAD does not even configure (a needed file is not committed)" "$CI_LOG_DIR/pristine-configure.log"
     cmake --build "$tmp/build" -j "$CI_JOBS" > "$CI_LOG_DIR/pristine-build.log" 2>&1 \
         || ci_fail pristine "a fresh checkout of HEAD does not build" "$CI_LOG_DIR/pristine-build.log"

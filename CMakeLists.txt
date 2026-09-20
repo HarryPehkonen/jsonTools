@@ -121,10 +121,12 @@ add_library(jt_fuzz_harness OBJECT fuzz/jt_fuzz.cpp)
 target_link_libraries(jt_fuzz_harness PRIVATE jt_core)
 
 if(JT_BUILD_FUZZING)
-  # JSOM's CMakeLists forces CMAKE_BUILD_TYPE=Release on the whole tree (it enters
-  # as a subdirectory and sets the cache with FORCE), which is what the fuzzer
-  # wants for speed — but it also strips -g. Ask for debug info on the code under
-  # test, so a finding's report names lines and not just addresses.
+  # The gate configures this build directory Release (CI_BUILD_TYPE in tools/ci.sh), which
+  # is what the fuzzer wants for speed — and Release strips -g, so ask for debug info on
+  # the code under test: a finding's report should name lines, not just addresses. (This
+  # used to be inherited by FORCE from JSOM's CMakeLists, which wrote the build type into
+  # this consumer's cache as a subdirectory; JSOM keeps its defaults to its own top-level
+  # builds now — kanban t_772eabd9 — so the gate states the build type itself.)
   target_compile_options(jt_core PRIVATE -g)
   if(TARGET jsom_lib)
     target_compile_options(jsom_lib PRIVATE -g)
