@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# pre-commit: the FAST tier — the part of the gate that must be seconds, not minutes.
+#
+# from AI-DEV-STARTER (plunk-in kit), templates/hooks/pre-commit. Deviation: jsonTools adds
+# the `tree` stage, so "I wrote the new file and forgot to git add it" fails the commit
+# rather than the push.
+#
+# Install as .githooks/pre-commit and arm it once per clone:
+#
+#     git config core.hooksPath .githooks
+#
+# Deliberate bypass when you need one:  git commit --no-verify
+#
+set -uo pipefail
+
+root=$(git rev-parse --show-toplevel) || exit 1
+
+# C++: a full run is minutes, so a commit gets only tree + build + tests. Everything else
+# (format, cli, asan, fuzz, tidy, wire, version, pristine) belongs to pre-push.
+if [ -x "$root/tools/ci.sh" ]; then
+    exec "$root/tools/ci.sh" tree build tests
+fi
+
+# No gate found is a failure, not a warning: a silently unarmed gate is worse than no
+# gate, because it looks armed.
+printf 'pre-commit: no gate found. Expected %s/tools/ci.sh (C++).\n' "$root" >&2
+exit 1

@@ -62,12 +62,14 @@ tools/ci.sh --list                    # what the stages are
 | `version` | `include/jt/version.hpp` == CMake `VERSION` == what every binary prints for `--version` |
 | `pristine` | `git archive HEAD` configures, builds and tests in a temp dir: the **committed** tree is complete |
 
-`.githooks/pre-push` is the repo's **only** hook: it runs the whole gate with
-`--require-clean`, so publishing is what gets checked and a commit stays instant
-(a full run includes two from-scratch builds, so gating every commit would just
-teach you to type `--no-verify`). Deliberate bypass is `git push --no-verify`.
-Enabling the hook is per clone, not per repo — a fresh clone has no gate until
-that one `git config` line runs.
+`.githooks/pre-commit` runs `tree build tests` — 1 s when nothing has changed, ~3 s
+after a one-file edit (incremental build + the 216 tests) — and `.githooks/pre-push`
+runs the whole gate with `--require-clean`. So every commit is a tree that builds
+and passes, and publishing additionally checks format, lint, sanitizers, the CLI
+contract, the fuzz smoke and a from-scratch build of the committed tree. Deliberate
+bypass is `git commit --no-verify` / `git push --no-verify`. Enabling the hooks is
+per clone, not per repo — a fresh clone has no gate until that one `git config`
+line runs.
 
 Every run ends with one unambiguous line — `GATE PASSED` or `GATE FAILED` — and a
 non-zero exit when it failed. A failure also names every requested stage that never
