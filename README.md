@@ -42,7 +42,7 @@ script**, `tools/ci.sh`, and by two git hooks that call it. No hosted CI, no
 network: the same script runs by hand, on commit, and on push.
 
 ```bash
-git config core.hooksPath .githooks   # once per clone: arms pre-commit + pre-push
+git config core.hooksPath .githooks   # once per clone: arms the gate on push
 tools/ci.sh                           # every stage, by hand
 tools/ci.sh build tests               # just these stages, in the order given
 tools/ci.sh --list                    # what the stages are
@@ -62,11 +62,12 @@ tools/ci.sh --list                    # what the stages are
 | `version` | `include/jt/version.hpp` == CMake `VERSION` == what every binary prints for `--version` |
 | `pristine` | `git archive HEAD` configures, builds and tests in a temp dir: the **committed** tree is complete |
 
-`.githooks/pre-commit` runs `tree build tests` (seconds on a warm build, so a
-commit stays cheap); `.githooks/pre-push` runs everything with `--require-clean`.
-Deliberate bypass is `git commit --no-verify` / `git push --no-verify`. Enabling
-the hooks is per clone, not per repo — a fresh clone has no gate until that one
-`git config` line runs.
+`.githooks/pre-push` is the repo's **only** hook: it runs the whole gate with
+`--require-clean`, so publishing is what gets checked and a commit stays instant
+(a full run includes two from-scratch builds, so gating every commit would just
+teach you to type `--no-verify`). Deliberate bypass is `git push --no-verify`.
+Enabling the hook is per clone, not per repo — a fresh clone has no gate until
+that one `git config` line runs.
 
 Every run ends with one unambiguous line — `GATE PASSED` or `GATE FAILED` — and a
 non-zero exit when it failed. A failure also names every requested stage that never

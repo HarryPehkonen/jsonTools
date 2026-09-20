@@ -70,7 +70,7 @@ Reference: https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines
 - Sanitizers: `tools/ci.sh asan` configures `build-asan` with
   `-fsanitize=address,undefined -fno-omit-frame-pointer` and runs the same suite.
 - Everything above runs through one script, `tools/ci.sh`, called by hand and by
-  the hooks in `.githooks/` (see README, "Local CI"). It also gates the
+  the hook in `.githooks/` (see README, "Local CI"). It also gates the
   repo-specific invariants that no general tool knows about: every file
   committed or ignored, every tool wired into CMake/tests/README, one version
   string, and a pristine build of `HEAD`.

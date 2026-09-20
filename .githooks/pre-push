@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #
-# pre-push: the FULL tier — the gate, on the tree you are about to publish.
+# pre-push: the FULL gate, on the tree you are about to publish.
+#
+# The repo's ONLY hook, on purpose: a full run builds from scratch twice (~10 minutes
+# on 4 cores), so gating every commit would only teach you to type --no-verify. The
+# gate runs when you publish, which is the moment "nothing broken leaves the machine"
+# actually matters.
 #
 # from AI-DEV-STARTER (plunk-in kit), templates/hooks/pre-push. Deviation: no stage list
 # here, because the default set inside tools/ci.sh is the single definition of the gate and

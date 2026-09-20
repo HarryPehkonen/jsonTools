@@ -28,10 +28,11 @@ cmake --build build -j$(nproc)
 ### Local CI (the gates, run by the hooks)
 
 `tools/ci.sh` runs every gate — `tree format build tests cli asan tidy wire
-version pristine` — and is the single definition of "the gate passed":
-`.githooks/pre-commit` runs `tree build tests` (fast), `.githooks/pre-push` runs
-the whole set and additionally requires a clean worktree. Enable once per clone
-with `git config core.hooksPath .githooks`. Per-machine settings live in `.ci.env`
+version pristine` — and is the single definition of "the gate passed". The repo's
+only hook, `.githooks/pre-push`, runs the whole set and additionally requires a
+clean worktree; commits are deliberately not gated, because a full run builds from
+scratch twice. Enable once per clone with `git config core.hooksPath .githooks`.
+Per-machine settings live in `.ci.env`
 (gitignored; see `.ci.env.example`); stage output goes to `.ci-logs/`. Run it
 directly while working: `tools/ci.sh build tests`, `tools/ci.sh tidy`,
 `tools/ci.sh --list`. The `wire` stage is the one to know when adding a tool: a
