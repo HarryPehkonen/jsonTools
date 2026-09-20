@@ -461,7 +461,7 @@ stage_tidy() {
             $(cmake_flag_jsom) > "$CI_LOG_DIR/tidy-configure.log" 2>&1 \
             || ci_fail tidy "cmake configure failed (tidy needs compile_commands.json)" "$CI_LOG_DIR/tidy-configure.log"
     fi
-    local -a sources
+    local -a sources=()
     mapfile -t sources < <(ci_tidy_sources)
 
     # A compile database that exists is not a compile database that covers this repo:
@@ -727,9 +727,34 @@ for stage in "${STAGES_REQUESTED[@]}"; do
         printf 'unknown stage: %s (try --list)\n' "$stage" >&2
         exit 2
     fi
-    "stage_$stage"
+    # A stage that returns non-zero without reporting a verdict is not a pass, and a stage that
+    # dies from a shell error cannot report anything at all — so neither is left to the summary.
+    if ! "stage_$stage"; then
+        FAILED_STAGE="$stage"
+        summary
+        printf 'FAILED: %s exited non-zero without reporting a verdict\n' "$stage" >&2
+        printf '\nGATE FAILED\n' >&2
+        exit 1
+    fi
     RAN_STAGES+=("$stage")
 done
 ELAPSED=$(( $(date +%s) - START ))
+
+# The verdict comes from what RAN, not from what was requested. A shell error can unwind out of
+# the loop above without either guard seeing it — measured 2026-09-20 on Computo's fork: `set -u`
+# plus `local -a sources` (declared, never filled) made "${#sources[@]}" an unbound-variable
+# error, which aborted stage_format and the dispatch loop together, and the run then printed
+# "all 10 stage(s) passed ... GATE PASSED" after executing one stage of ten (INCIDENTS.md). This
+# comparison is the backstop for that whole class: if any requested stage did not run, the run
+# fails.
+if [ "${#RAN_STAGES[@]}" -ne "${#STAGES_REQUESTED[@]}" ]; then
+    summary
+    printf 'FAILED: %s of %s stage(s) did not run — the run ended early\n' \
+        "$(( ${#STAGES_REQUESTED[@]} - ${#RAN_STAGES[@]} ))" "${#STAGES_REQUESTED[@]}" >&2
+    printf '  ran: %s\n' "${RAN_STAGES[*]:-none}" >&2
+    printf '\nGATE FAILED\n' >&2
+    exit 1
+fi
+
 summary
 printf '\nall %s stage(s) passed in %ss\nGATE PASSED\n' "${#STAGES_REQUESTED[@]}" "$ELAPSED"

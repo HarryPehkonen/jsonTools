@@ -1,16 +1,16 @@
 {
   "kit": "AI-DEV-STARTER",
   "url": "https://github.com/HarryPehkonen/AI-DEV-STARTER",
-  "revision": "a6ad2ea6951c66eb5b7c2eea8757ab8d3311174e",
+  "revision": "951608c2675a2f5c2d0b59d9c19c632d23a043af",
   "recorded_at": "2026-09-20",
   "record_kind": "retroactive",
-  "record_note": "Wired by hand on 2026-09-19 (commit 30897dc, 'build: gate every commit with tools/ci.sh + .githooks (format, lint, tests, invariants)'), before the kit existed as a git repo — so `revision` is the kit's FIRST PUBLISHED commit, not the exact copy point; do not read it as the tree this repo was copied from. Five of the six artifacts here are deliberately adapted for jsonTools' 12-stage gate, and each reason is below as well as in the header of tools/ci.sh: the kit's C++ template ships 10 stages, this repo adds cli/fuzz/wire, drops tsan, and builds offline against the sibling JSOM checkout. Two PLUNK-IN step-5 artifacts are absent and are deliberately NOT entries: INCIDENTS.md was never copied (git log --all -- INCIDENTS.md is empty, and no equivalent file exists), so jsonTools records its deviations in the headers of the three copied scripts instead; and CLAUDE.md is this repo's own contract, not a copy of the template (see its entry). The kit's Deno and Python artifacts (templates/deno/gate.sh, templates/python/gate.sh, the kit's own .gitignore) never applied to a C++ repo and are not listed. Rule that keeps this file true: any commit that edits a copied artifact must update that artifact's repo_sha256 in the same commit. **2026-09-20, card t_0cc793fb:** the `kitprobes` stage and `tools/kit-probes/tidy-baseline.sh` were taken from the kit at the revision above — a fix that must propagate ships a probe, and this copy now runs it in its own gate. `revision` moved to that commit because these entries come from it; the earlier entries are still the fb387f2 wiring, and the kit files behind them have not changed between the two commits (the ones that did — `templates/cpp/ci.sh`, `templates/hooks/pre-push` — were ported in this same commit).",
+  "record_note": "Wired by hand on 2026-09-19 (commit 30897dc, 'build: gate every commit with tools/ci.sh + .githooks (format, lint, tests, invariants)'), before the kit existed as a git repo — so `revision` is the kit's FIRST PUBLISHED commit, not the exact copy point; do not read it as the tree this repo was copied from. Five of the six artifacts here are deliberately adapted for jsonTools' 12-stage gate, and each reason is below as well as in the header of tools/ci.sh: the kit's C++ template ships 10 stages, this repo adds cli/fuzz/wire, drops tsan, and builds offline against the sibling JSOM checkout. Two PLUNK-IN step-5 artifacts are absent and are deliberately NOT entries: INCIDENTS.md was never copied (git log --all -- INCIDENTS.md is empty, and no equivalent file exists), so jsonTools records its deviations in the headers of the three copied scripts instead; and CLAUDE.md is this repo's own contract, not a copy of the template (see its entry). The kit's Deno and Python artifacts (templates/deno/gate.sh, templates/python/gate.sh, the kit's own .gitignore) never applied to a C++ repo and are not listed. Rule that keeps this file true: any commit that edits a copied artifact must update that artifact's repo_sha256 in the same commit. **2026-09-20, card t_0cc793fb:** the `kitprobes` stage and `tools/kit-probes/tidy-baseline.sh` were taken from the kit at the revision above — a fix that must propagate ships a probe, and this copy now runs it in its own gate. `revision` moved to that commit because these entries come from it; the earlier entries are still the fb387f2 wiring, and the kit files behind them have not changed between the two commits (the ones that did — `templates/cpp/ci.sh`, `templates/hooks/pre-push` — were ported in this same commit). **2026-09-20, later the same day (still card t_0cc793fb):** `revision` moved to 951608c2675a… for two more artifacts from the kit — the gate's dispatch guards (a stage that dies or returns non-zero without a verdict can no longer leave a green run; measured on this gate's own `local -a sources`, see INCIDENTS.md) and that fix's own probe `tools/kit-probes/gate-stage-guards.sh`. Between the previous revision and this one the kit changed only `templates/cpp/ci.sh`, `INCIDENTS.md`, `DESIGN-NOTES.md` and the new probe; the entries behind the other files are unchanged by it.",
   "files": [
     {
       "repo_path": "tools/ci.sh",
       "kit_path": "templates/cpp/ci.sh",
-      "repo_sha256": "d4abe5309977f2bb0bd551240307b775052bbb34f3380ecfc06e6851ae2402c3",
-      "kit_sha256": "5d6c89daa3fd1c6ede018501eb9b93f904caf2379de2ed111671189664e9140a",
+      "repo_sha256": "15202e4d7c36564fc9cf8b48c572827b01f79f595bf845e5497acbb24833a073",
+      "kit_sha256": "f60599bb44bed25c4b03b996f5526f6d7510ac1b69a6e636359885d0752d3086",
       "adapted": true,
       "adapted_why": "The one copy that is a superset rather than an edit: stages ADDED are cli (spawns each jt_* binary), fuzz (libFuzzer smoke with CI_FUZZ_BUILD_DIR/CI_FUZZ_SECONDS) and wire (tools/check_wiring.py); stage tsan is DROPPED (no threads in this repo yet); CI_JSOM_DIR is added so the gate builds against the sibling ../JSOM checkout instead of FetchContent (offline, and every run prints the JSOM revision it used); CI_TEST_CMD is unused because there is exactly one gtest binary. Its header lists every deviation so nobody has to diff it against the kit. The tidy-baseline comparison is the kit's CURRENT tidy_key form (ported in 7ecc1d2), so a sync should diff this file, never overwrite it."
     },
@@ -51,6 +51,13 @@
       "kit_path": "probes/tidy-baseline.sh",
       "repo_sha256": "efd9bbca108bb7bd1e527d95d09546c1b3bceca451054367b2fed6f92bfc6379",
       "kit_sha256": "efd9bbca108bb7bd1e527d95d09546c1b3bceca451054367b2fed6f92bfc6379",
+      "adapted": false
+    },
+    {
+      "repo_path": "tools/kit-probes/gate-stage-guards.sh",
+      "kit_path": "probes/gate-stage-guards.sh",
+      "repo_sha256": "0a9f752c5081d6cc61b0f478ebee356d1358c7aca9562643411249901178be86",
+      "kit_sha256": "0a9f752c5081d6cc61b0f478ebee356d1358c7aca9562643411249901178be86",
       "adapted": false
     }
   ]
