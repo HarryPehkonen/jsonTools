@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 #
-# pre-push: the FULL gate, on the tree you are about to publish.
+# pre-push: the FULL tier — every stage, on the tree you are about to publish.
 #
-# The repo's ONLY hook, on purpose: a full run builds from scratch twice (~10 minutes
-# on 4 cores), so gating every commit would only teach you to type --no-verify. The
-# gate runs when you publish, which is the moment "nothing broken leaves the machine"
-# actually matters.
+# TWO hooks, and the split is decided by a measurement rather than by intuition.
+# .githooks/pre-commit runs the fast tier (`tree build tests`: 1 s when nothing has
+# changed, ~3 s after a one-file edit), so every commit is a tree that builds and
+# passes. This hook runs everything else. The full run is minutes — it builds from
+# scratch twice — and that is exactly what had made committing look expensive; the
+# 1-3 s commit tier is not a tax and it buys a bisectable history. Neither hook
+# passes a stage list, so the default set inside tools/ci.sh stays the single
+# definition of the gate.
 #
 # from AI-DEV-STARTER (plunk-in kit), templates/hooks/pre-push. Deviation: no stage list
 # here, because the default set inside tools/ci.sh is the single definition of the gate and
