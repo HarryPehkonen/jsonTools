@@ -1,0 +1,50 @@
+{
+  "kit": "AI-DEV-STARTER",
+  "url": "https://github.com/HarryPehkonen/AI-DEV-STARTER",
+  "revision": "fb387f2044989f76bb2fe234cef39e85ac050328",
+  "recorded_at": "2026-09-20",
+  "record_kind": "retroactive",
+  "record_note": "Wired by hand on 2026-09-19 (commit 30897dc, 'build: gate every commit with tools/ci.sh + .githooks (format, lint, tests, invariants)'), before the kit existed as a git repo — so `revision` is the kit's FIRST PUBLISHED commit, not the exact copy point; do not read it as the tree this repo was copied from. All five files here are deliberately adapted for jsonTools' 11-stage gate, and each reason is below as well as in the header of tools/ci.sh: the kit's C++ template ships 9 stages, this repo adds cli/fuzz/wire, drops tsan, and builds offline against the sibling JSOM checkout. Two PLUNK-IN step-5 artifacts are absent and are deliberately NOT entries: INCIDENTS.md was never copied (git log --all -- INCIDENTS.md is empty, and no equivalent file exists), so jsonTools records its deviations in the headers of the three copied scripts instead; and CLAUDE.md is this repo's own contract, not a copy of the template (see its entry). The kit's Deno and Python artifacts (templates/deno/gate.sh, templates/python/gate.sh, the kit's own .gitignore) never applied to a C++ repo and are not listed. Rule that keeps this file true: any commit that edits a copied artifact must update that artifact's repo_sha256 in the same commit.",
+  "files": [
+    {
+      "repo_path": "tools/ci.sh",
+      "kit_path": "templates/cpp/ci.sh",
+      "repo_sha256": "119cc0f06169dc2c3128c4881ba4b95ad5ff70a21ee2cdc901c6f680f1e487b4",
+      "kit_sha256": "dcccb2066b856ec4bbbe04e98d74c37fffe5372a1486cab47623f403b9f613d1",
+      "adapted": true,
+      "adapted_why": "The one copy that is a superset rather than an edit: stages ADDED are cli (spawns each jt_* binary), fuzz (libFuzzer smoke with CI_FUZZ_BUILD_DIR/CI_FUZZ_SECONDS) and wire (tools/check_wiring.py); stage tsan is DROPPED (no threads in this repo yet); CI_JSOM_DIR is added so the gate builds against the sibling ../JSOM checkout instead of FetchContent (offline, and every run prints the JSOM revision it used); CI_TEST_CMD is unused because there is exactly one gtest binary. Its header lists every deviation so nobody has to diff it against the kit. The tidy-baseline comparison is the kit's CURRENT tidy_key form (ported in 7ecc1d2), so a sync should diff this file, never overwrite it."
+    },
+    {
+      "repo_path": ".ci.env.example",
+      "kit_path": "templates/cpp/.ci.env.example",
+      "repo_sha256": "89d203bc9db88d0d11e8eab924d9bec868a0b5b8ae1cb1f84d308334ab18789e",
+      "kit_sha256": "777a750755a10d79674d2ff7605130ceed14668416b44c3acefd73d819e43308",
+      "adapted": true,
+      "adapted_why": "Documents THIS repo's gate: the 11-stage CI_DEFAULT_STAGES, CI_JSOM_DIR (sibling checkout or FetchContent when unset), CI_FUZZ_BUILD_DIR/CI_FUZZ_SECONDS, and the absence of CI_TEST_CMD — and drops the kit's sections that have no counterpart here (CI_BUILD_TYPE, CI_TSAN_BUILD_DIR, CI_SOURCE_GLOBS, CI_CMAKE_FLAGS, CI_VERSION_HEADER, CI_ASAN_TEST_CMD). The clang-tidy baseline comment is the kit's current --write-tidy-baseline text, not the old hand-capture recipe (ported in 7ecc1d2)."
+    },
+    {
+      "repo_path": ".githooks/pre-commit",
+      "kit_path": "templates/hooks/pre-commit",
+      "repo_sha256": "3ad79e469edf955746ee2c69c60bb319f7b48da8bdc0e2a8eaa92a6e835164f0",
+      "kit_sha256": "e304ddcb48e216029c8e77402d927695dae4895532f6bf12d1ecb54604b652d8",
+      "adapted": true,
+      "adapted_why": "Deviation declared in its own header: jsonTools' fast tier is `tree build tests`, not the kit's `build tests`, so 'I wrote the new file and forgot to git add it' fails the commit instead of the push; the kit's fallback branch for Deno/Python repos (scripts/gate.sh) was deleted, since this is a C++-only repo."
+    },
+    {
+      "repo_path": ".githooks/pre-push",
+      "kit_path": "templates/hooks/pre-push",
+      "repo_sha256": "346d49d34c967e660e4a1fa35f9dc4dafe04faf76fbbb5b273393acbd79df939",
+      "kit_sha256": "2c82ed7099fc5687795264521be327fdda23e8c02eadd3ac12bd9667186c0d18",
+      "adapted": true,
+      "adapted_why": "Deviation declared in its own header: this hook passes NO stage list (`tools/ci.sh --require-clean`), because CI_DEFAULT_STAGES inside tools/ci.sh is the single definition of the gate — a list here would be a second copy of it and would also drop this repo's cli/fuzz/wire stages; the kit's Deno/Python branch was deleted. Its header was rewritten in c78a26e (comment-only) to stop claiming to be the repo's only hook."
+    },
+    {
+      "repo_path": "CLAUDE.md",
+      "kit_path": "templates/CLAUDE.md.template",
+      "repo_sha256": "b926b1d8e1c4cd10453ee0b1d269533583f04d8137cfcc4298c0089152cef876",
+      "kit_sha256": "615ad65a51eb5b70a59882d261eeacc1510cbd7c8cd59d730bba945ad19fa3da",
+      "adapted": true,
+      "adapted_why": "Not a copy, and the direction matters: this contract predates the kit (created 2026-09-08 in 001caf9, two weeks before the kit's template) and the kit was distilled FROM contracts like it — DESIGN-NOTES D3 says the kit's artifact-identity stage REPLACES jsonTools' wire stage. Copying the placeholder template over this file would delete every project-specific command in it, so a sync must never do that. The one kit-shaped change is the 'Local CI' paragraph that now records the two-hook split (44c3f6c, 2026-09-20, written with Harri's explicit approval because CLAUDE.md is a protected agent-instruction file and the earlier headless write was refused; that draft is kept at ../gate-evidence/jsonTools/CLAUDE.md-hooks-section.patch, path relative to this repo root). The contract is LIVE at this path — no staging path remains."
+    }
+  ]
+}
