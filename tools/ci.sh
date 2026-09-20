@@ -48,18 +48,22 @@ export NO_COLOR=1
 
 # git exports GIT_INDEX_FILE to a hook when the commit is made with a PATHSPEC
 # (`git commit -- <path>`): it names git's TEMPORARY index for that one commit, not this
-# repository's index, and every process a hook starts inherits it. This gate's own git
-# calls all read THIS repo, so they survive it — but a `git` command the gate runs inside
-# ANOTHER repository does not: the entries belong to a different object store, and the
-# first blob that repository lacks is fatal,
-#     fatal: unable to read 691e2bdafaf312970644391de042d38c2c5972d8
-# — which is how a pathspec commit failed its OWN gate at `build` on Computo (`CMake Error
-# at .../jsom-populate-gitupdate.cmake:186 (message): Failed to get the status`, cards
-# t_9541aa62 -> t_0a9a0018). Here that shape is the FetchContent fallback CMakeLists.txt
-# takes when CI_JSOM_DIR is empty — the knob's own comment says `empty = let CMake
-# FetchContent JSOM`, and cmake's update step then runs `git status` inside its clone. The
-# same shape is what this repo's own kitprobes scripts have by design: they run git in
-# throwaway repositories in a temp dir.
+# repository's index, and every process a hook starts inherits it. Most of this gate's own
+# git calls read THIS repo and survive it; three do not, and they are the whole exposure:
+# rev_of() asks the sibling JSOM checkout for its revision and its dirtiness with
+# `git -C "$dir" rev-parse` and `git -C "$dir" status --porcelain` (that is the `JSOM @ …`
+# half of this gate's header), the FetchContent fallback below has cmake's update step run
+# inside a fresh clone, and this repo's own kitprobes scripts run git in throwaway
+# repositories by design. Handed THIS repo's index, the first two read entries whose blobs
+# that other repository's object store does not have, and the first one it lacks is fatal,
+#     fatal: unable to read d731f7cb4c9d558cde8e134a2f7ae80ee93bfeaf      # measured, rc 128
+# (jsonTools against the sibling JSOM, 2026-09-20). In rev_of() it is silent rather than
+# loud — the error is suppressed, so the header quietly loses its `+dirty` marker, the
+# signal that says the dependency checkout a build used is not the one that was tested —
+# while on Computo the same shape made a pathspec commit fail its OWN gate at `build` with a
+# dependency-update error, on a tree that builds fine (`CMake Error at
+# .../jsom-populate-gitupdate.cmake:186 (message): Failed to get the status`, cards
+# t_9541aa62 -> t_0a9a0018).
 #
 # Unset it once, here, rather than `env -u` on the configure lines: the variable reaches
 # everything the gate starts — every configure, the `pristine` archive build, the kitprobes
