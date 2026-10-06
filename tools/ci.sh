@@ -83,7 +83,23 @@ CI_FUZZ_SECONDS=${CI_FUZZ_SECONDS:-60}         # libFuzzer smoke budget; the nig
 CI_LOG_DIR=${CI_LOG_DIR:-.ci-logs}
 CI_STRICT_TOOLS=${CI_STRICT_TOOLS:-0}          # 1 = a missing tool fails instead of SKIPping
 CI_KEEP_TMP=${CI_KEEP_TMP:-0}                  # 1 = keep the pristine-checkout temp dir
-CI_DEFAULT_STAGES=${CI_DEFAULT_STAGES:-"tree format kitprobes build tests cli asan fuzz tidy wire version pristine"}
+# The two hook tiers, ONE definition each. Both hooks name a tier instead of repeating a list, so a
+# stage added below cannot be run by a hand run and skipped by a push (or the reverse) — in FSMTable
+# the gate had gained `fuzz` while the installed pre-push still named the kit's original eleven, so
+# every push skipped the fuzzer. The lines below are what probes/hook-tiers-agree.sh compares the two
+# variables against, and the header above says the same thing in its own words.
+#
+#   fast  (pre-commit)  tree format build tests
+#   full  (pre-push)    --require-clean tree format kitprobes build tests cli asan fuzz tidy wire version pristine
+#
+# `format` is in the fast tier deliberately: it is the one check that says "the file you are about to
+# commit is not the file clang-format would write", it costs well under a second on a warm tree, and
+# its absence from a fast tier is exactly how an unformatted commit reached FSMTable's main branch on
+# 2026-10-06. `full` IS the default list, so a hand run and a push run the same eleven stages and only
+# --require-clean differs.
+CI_FAST_STAGES=${CI_FAST_STAGES:-"tree format build tests"}
+CI_FULL_STAGES=${CI_FULL_STAGES:-"tree format kitprobes build tests cli asan fuzz tidy wire version pristine"}
+CI_DEFAULT_STAGES=${CI_DEFAULT_STAGES:-$CI_FULL_STAGES}
 CI_TIDY_BASELINE=${CI_TIDY_BASELINE:-.ci/tidy-baseline.txt}
 CI_JSOM_DIR=${CI_JSOM_DIR:-}                   # empty = let CMake FetchContent JSOM
 
@@ -747,6 +763,8 @@ while [ $# -gt 0 ]; do
         printf 'unknown option: %s (try --help)\n' "$1" >&2
         exit 2
         ;;
+    fast) STAGES_REQUESTED+=($CI_FAST_STAGES) ;;
+    full) STAGES_REQUESTED+=($CI_FULL_STAGES) ;;
     *) STAGES_REQUESTED+=("$1") ;;
     esac
     shift
