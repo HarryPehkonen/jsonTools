@@ -38,14 +38,14 @@ cmake --build build -j
 ## Local CI (the commit gate)
 
 Formatting, linting, tests, sanitizers and repo invariants are enforced by **one
-script**, `tools/ci.sh`, and by two git hooks that call it. No hosted CI, no
+script**, `scripts/gate.sh`, and by two git hooks that call it. No hosted CI, no
 network: the same script runs by hand, on commit, and on push.
 
 ```bash
 git config core.hooksPath .githooks   # once per clone: arms the gate on push
-tools/ci.sh                           # every stage, by hand
-tools/ci.sh build tests               # just these stages, in the order given
-tools/ci.sh --list                    # what the stages are
+scripts/gate.sh                           # every stage, by hand
+scripts/gate.sh --tier fast               # just these stages, in the order given
+kit-ci --list                    # what the stages are
 ```
 
 | stage | what it proves |
@@ -107,7 +107,7 @@ cmake --build build-fuzz --target build_fuzzer
 ./build-fuzz/fuzz_jt build-fuzz/corpus/crash-<hash>
 ```
 
-The gate runs 60 seconds of that on every push (`tools/ci.sh fuzz`); the long
+The gate runs 60 seconds of that on every push (`scripts/gate.sh fuzz`); the long
 campaign is the nightly cron (`~/hermes-workspace/cron/fuzz_overnight.sh`), whose
 findings are reported by the `fuzz-report` job. A crash found there becomes a
 regression test in `tests/` — the same rule as any other bug fix.

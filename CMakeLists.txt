@@ -114,14 +114,14 @@ endif()
 
 # The harness also lives in the DEFAULT build, as a compile-only object
 # library: the tidy stage lints what the compile database covers, and a source
-# no build sees is a source no gate sees (tools/ci.sh's ci_sources() /
+# no build sees is a source no gate sees (scripts/gate.sh's ci_sources() /
 # ci_tidy_sources() read fuzz/*.cpp for the same reason). Nothing links this
 # object; the real fuzz target is built by the fuzz stage with clang.
 add_library(jt_fuzz_harness OBJECT fuzz/jt_fuzz.cpp)
 target_link_libraries(jt_fuzz_harness PRIVATE jt_core)
 
 if(JT_BUILD_FUZZING)
-  # The gate configures this build directory Release (CI_BUILD_TYPE in tools/ci.sh), which
+  # The gate configures this build directory Release (CI_BUILD_TYPE in scripts/gate.sh), which
   # is what the fuzzer wants for speed — and Release strips -g, so ask for debug info on
   # the code under test: a finding's report should name lines, not just addresses. (This
   # used to be inherited by FORCE from JSOM's CMakeLists, which wrote the build type into

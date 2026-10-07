@@ -1,39 +1,34 @@
 #!/usr/bin/env bash
 #
-# pre-push: the FULL tier — every stage, on the tree you are about to publish.
+# pre-push: the FULL tier — the gate, on the tree you are about to publish.
 #
-# TWO hooks, and the split is decided by a measurement rather than by intuition.
-# .githooks/pre-commit runs the fast tier (`tree build tests`: 1 s when nothing has
-# changed, ~3 s after a one-file edit), so every commit is a tree that builds and
-# passes. This hook runs everything else. The full run is minutes — it builds from
-# scratch twice — and that is exactly what had made committing look expensive; the
-# 1-3 s commit tier is not a tax and it buys a bisectable history. Neither hook
-# passes a stage list, so the default set inside tools/ci.sh stays the single
-# definition of the gate.
-#
-# from AI-DEV-STARTER (plunk-in kit), templates/hooks/pre-push. Deviation: no stage list
-# here, because the default set inside tools/ci.sh is the single definition of the gate and
-# a list in this file would be a second copy of it (the kit's C++ template pins one; this
-# repo's default set carries the project-shaped stages cli/fuzz/wire as well).
-#
+# from AI-DEV-STARTER (plunk-in kit) — if you edit this file, say why in INCIDENTS.md.
 # Install as .githooks/pre-push and arm it once per clone:
 #
 #     git config core.hooksPath .githooks
 #
-# Requires a clean worktree, and ends with a pristine checkout of HEAD built from scratch —
-# the check that catches "it works on my machine because of a file I never committed".
+# This hook is the only caller of the "never publish an uncommitted tree" rule. The old gate
+# took it as a flag (`--require-clean`); gate.toml's vocabulary has no per-run flags, so the
+# flag became CI_REQUIRE_CLEAN=1 in this hook's environment, which scripts/tree.sh reads. The
+# rule itself did not move, and a hand run still gets the full tier without it.
+#
+# The full tier also proves the COMMITTED tree is complete: the `pristine` stage archives HEAD
+# into a temp dir and configures, builds and tests it there.
 #
 # Deliberate bypass when you need one:  git push --no-verify
 #
+# 2026-10-06 (card t_075c0a6f): the stage list moved into gate.toml, so this hook names the
+# tier. The old hook also ran a `kitprobes` stage; that stage and its probe scripts went with
+# the conversion (the closing note in gate.toml has the measurement).
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel) || exit 1
 
-if [ -x "$root/tools/ci.sh" ]; then
-    exec "$root/tools/ci.sh" --require-clean
+if [ -x "$root/scripts/gate.sh" ]; then
+    export CI_REQUIRE_CLEAN=1
+    exec "$root/scripts/gate.sh" --tier full
 fi
 
-# No gate found is a failure, not a warning: a silently unarmed gate is worse than no
-# gate, because it looks armed.
-printf 'pre-push: no gate found. Expected %s/tools/ci.sh (C++).\n' "$root" >&2
+printf 'pre-push: no gate found. Expected %s/scripts/gate.sh (with gate.toml next to it).\n' \
+    "$root" >&2
 exit 1
